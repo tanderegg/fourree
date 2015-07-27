@@ -1,0 +1,29 @@
+[package]
+name = "fourree"
+version = "0.1.0"
+authors = ["Tim Anderegg <timothy.anderegg@cfpb.gov>"]
+
+[lib]
+name = "fourree"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fourree"
+path = "src/main.rs"
+
+[[example]]
+name = "generators"
+path = "examples/generators/main.rs"
+
+[[example]]
+name = "generate_row"
+path = "examples/generate_row/main.rs"
+
+[[example]]
+name = "json_schema"
+path = "examples/json_schema/main.rs"
+
+[dependencies]
+rand = "0.3"
+serde = "*"
+log = "*"
