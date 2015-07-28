@@ -12,8 +12,8 @@
       "name": "normal_field",
       "data_type": "integer",
       "generator": "gauss",
-      "mean": 10000.0,
-      "std_dev": 1000.0
+      "mean": 10000,
+      "std_dev": 1000
     },
     {
       "name": "string_field",
