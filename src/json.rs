@@ -261,7 +261,7 @@ fn parse_gauss<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, S
         match obj.get("mean")
                  .ok_or("Mean is required for a gauss distribution field.".to_string())
                  .and_then(|std_dev| {
-                    std_dev.as_f64()
+                    std_dev.as_u64()
                            .ok_or("Mean must be a number!".to_string())
                  })
         {
@@ -272,7 +272,7 @@ fn parse_gauss<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, S
         match obj.get("mean")
                  .ok_or("Std deviation is required for a gauss distribution field.".to_string())
                  .and_then(|std_dev| {
-                    std_dev.as_f64()
+                    std_dev.as_u64()
                            .ok_or("Std deviation must be a number!".to_string())
                  })
         {

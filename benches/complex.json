@@ -1,0 +1,346 @@
+{
+  "table_name": "example",
+  "fields": [
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    },
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    },
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    },
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    },
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    },
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    },
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    },
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    },
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    },
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    },
+    {
+      "name": "integer_field",
+      "data_type": "integer",
+      "generator": "integer",
+      "min": 0,
+      "max": 100000
+    },
+    {
+      "name": "normal_field",
+      "data_type": "integer",
+      "generator": "gauss",
+      "mean": 10000,
+      "std_dev": 1000
+    },
+    {
+      "name": "string_field",
+      "data_type": "varchar(64)",
+      "generator": "string",
+      "length": 64
+    },
+    {
+      "name": "date_field",
+      "data_type": "date",
+      "generator": "date"
+    },
+    {
+      "name": "choice_field",
+      "data_type": "varchar(3)",
+      "generator": "choice",
+      "choices": ["UNK", "ABC", "DEF", "GHI", "JKL"]
+    }
+  ]
+}

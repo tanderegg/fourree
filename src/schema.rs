@@ -11,7 +11,7 @@ trait Generator {
 pub enum FieldGenerator {
     NoGen,
     Integer(i64, i64),
-    Gauss(f64, f64),
+    Gauss(u64, u64),
     Date,
     String(usize),
     Choice(Vec<String>)
@@ -57,13 +57,12 @@ impl Schema {
     }
 
     pub fn generate_row(&self, rng: &mut rand::ThreadRng, delim: &str) -> String {
-        let mut result = String::new();
+        let mut result = Vec::with_capacity(self.fields.len());
 
         for field in self.fields.iter() {
-            result = result + &field.generate(rng);
-            result = result + delim
+            result.push(field.generate(rng));
         }
-        result
+        result.as_slice().join(delim)
     }
 }
 
