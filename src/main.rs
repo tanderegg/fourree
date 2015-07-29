@@ -52,10 +52,10 @@ fn main() {
         init_logger(LogLevelFilter::Info, None).ok().expect("Failed to initialize logger!");
     }
 
-    let num_rows: u64;
-    if matches.opt_present("n") {
-        info!("Received option: num_rows = {}", matches.opt_str("n").unwrap());
-        num_rows = match matches.opt_str("n").unwrap().trim().parse::<u64>() {
+    let num_rows = if matches.opt_present("n") {
+        let rows_opt = matches.opt_str("n").unwrap().trim().to_string();
+        info!("Received option: num_rows = {}", rows_opt);
+        match rows_opt.parse::<u64>() {
             Err(err) => {
                 warn!("{}, using default value {}", err, NUM_ROWS_DEFAULT);
                 NUM_ROWS_DEFAULT
@@ -63,13 +63,13 @@ fn main() {
             Ok(nrows) => nrows
         }
     } else {
-        num_rows = NUM_ROWS_DEFAULT;
-    }
+        NUM_ROWS_DEFAULT
+    };
 
-    let batch_size: u64;
-    if matches.opt_present("b") {
-        info!("Received option: batch_size = {}", matches.opt_str("b").unwrap());
-        batch_size = match matches.opt_str("b").unwrap().trim().parse::<u64>() {
+    let batch_size = if matches.opt_present("b") {
+        let batch_opt = matches.opt_str("b").unwrap().trim().to_string();
+        info!("Received option: batch_size = {}", batch_opt);
+        match batch_opt.parse::<u64>() {
             Err(err) => {
                 warn!("{}, using default value {}", err, BATCH_SIZE_DEFAULT);
                 BATCH_SIZE_DEFAULT
@@ -77,8 +77,8 @@ fn main() {
             Ok(bsize) => bsize
         }
     } else {
-        batch_size = BATCH_SIZE_DEFAULT
-    }
+        BATCH_SIZE_DEFAULT
+    };
 
     let input_file = if !matches.free.is_empty() {
         matches.free[0].clone()
@@ -94,12 +94,12 @@ fn main() {
     match load_schema_from_file(&input_file) {
         Ok(schema) => {
             let mut rng = rand::thread_rng();
-
             let mut batch_start = time::precise_time_s();
-            for i in 1..num_rows {
-                debug!("{}", schema.generate_row(&mut rng, "\t"));
-                schema.generate_row(&mut rng, "\t");
 
+            for i in 1..num_rows {
+                let row = schema.generate_row(&mut rng, "\t");
+                debug!("{}", row);
+                
                 if i % batch_size == 0 {
                     let batch_elapsed = time::precise_time_s();
                     info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
