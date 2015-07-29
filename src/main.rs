@@ -22,6 +22,7 @@ fn print_usage(program: &str, opts: Options) {
 
 const NUM_ROWS_DEFAULT: u64 = 1000;
 const BATCH_SIZE_DEFAULT: u64 = 100;
+const MAX_THREADS: u64 = 128;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -77,7 +78,7 @@ fn main() {
                 warn!("{}, using default value {}", err, BATCH_SIZE_DEFAULT);
                 BATCH_SIZE_DEFAULT
             },
-            Ok(bsize) => bsize
+            Ok(bsize) => { bsize }
         }
     } else {
         BATCH_SIZE_DEFAULT
@@ -98,7 +99,14 @@ fn main() {
                 warn!("{}, using default value {}", err, 1);
                 1
             }
-            Ok(threads) => threads
+            Ok(threads) => {
+                if threads > MAX_THREADS {
+                    warn!("Can't have more than {} threads, using {}", MAX_THREADS, MAX_THREADS);
+                    MAX_THREADS
+                } else {
+                    threads
+                }
+            }
         }
     } else {
         1
@@ -122,10 +130,13 @@ fn main() {
                     threads.push(thread::spawn(move || {
                         let mut rng = rand::thread_rng();
                         for _ in 0..batches_per_thread.clone() {
+                            let mut batch = String::new();
                             let batch_start = time::precise_time_s();
                             for _ in 0..batch_size.clone() {
                                 let row = thread_schema.generate_row(&mut rng, "\t");
                                 debug!("{}", row);
+                                batch.push_str(&row);
+                                batch.push('\n');
                             }
                             let batch_elapsed = time::precise_time_s();
                             info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
@@ -139,13 +150,18 @@ fn main() {
             } else {
                 let mut rng = rand::thread_rng();
                 let mut batch_start = time::precise_time_s();
+                let mut batch = String::new();
+
                 for i in 0..num_rows {
                     let row = schema.generate_row(&mut rng, "\t");
                     debug!("{}", row);
+                    batch.push_str(&row);
+                    batch.push('\n');
 
                     if i % batch_size == 0 {
                         let batch_elapsed = time::precise_time_s();
                         info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
+                        batch = String::new();
                         batch_start = time::precise_time_s();
                     }
                 }
