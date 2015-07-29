@@ -74,8 +74,8 @@ pub fn generate_date<R: rand::Rng>(rng: &mut R) -> Date {
     let mut bytes = [0u8; 3];
     rng.fill_bytes(&mut bytes);
 
-    let month: u8 = (bytes[0] * 12) / 255;
-    let year: u8 = (bytes[1] * 116) / 255;
+    let month: u8 = ((bytes[0] as u16 * 12) / 255) as u8;
+    let year: u8 = ((bytes[1] as u16 * 116) / 255) as u8;
 
     let day_range = match month {
         1 | 3 | 5 | 7...8 | 10 | 12 => 31,
@@ -83,7 +83,7 @@ pub fn generate_date<R: rand::Rng>(rng: &mut R) -> Date {
         _ => 30
     };
 
-    let day = (bytes[2] * day_range) / 255;
+    let day = ((bytes[2] as u16 * day_range) / 255) as u8;
 
     Date {
         month: month as u8,
