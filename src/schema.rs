@@ -1,4 +1,3 @@
-
 use std::fmt;
 use rand;
 
@@ -63,6 +62,18 @@ impl Schema {
             result.push(field.generate(rng));
         }
         result.as_slice().join(delim)
+    }
+
+    pub fn generate_rows(&self, rng: &mut rand::ThreadRng, delim: &str, size: u64) -> String {
+        let mut output = String::new();
+        // And Generate <batch_size> rows per batch
+        for _ in 0..size.clone() {
+            let row = self.generate_row(rng, delim);
+            debug!("{}", row);
+            output.push_str(&row);
+            output.push('\n');
+        }
+        output
     }
 }
 

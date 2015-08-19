@@ -9,7 +9,7 @@ const UPPERCASE_CHARS: &'static str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 pub struct Date {
     day: u8,
     month: u8,
-    year: u8
+    year: u16
 }
 
 impl ToString for Date {
@@ -75,7 +75,7 @@ pub fn generate_date<R: rand::Rng>(rng: &mut R) -> Date {
     rng.fill_bytes(&mut bytes);
 
     let month: u8 = ((bytes[0] as u16 * 12) / 255) as u8;
-    let year: u8 = ((bytes[1] as u16 * 116) / 255) as u8;
+    let year: u16 = (((bytes[1] as u16 * 116) / 255) + 1900) as u16;
 
     let day_range = match month {
         1 | 3 | 5 | 7...8 | 10 | 12 => 31,
@@ -88,7 +88,7 @@ pub fn generate_date<R: rand::Rng>(rng: &mut R) -> Date {
     Date {
         month: month as u8,
         day: day as u8,
-        year: year as u8
+        year: year as u16
     }
 }
 

@@ -9,7 +9,6 @@ extern crate fourree;
 extern crate rand;
 
 use test::Bencher;
-//use std::thread;
 
 use fourree::generators::*;
 use fourree::json::load_schema_from_file;
@@ -183,26 +182,6 @@ fn bench_generate_1000_complex_rows_from_file(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        let mut result = String::new();
-        for i in 0..1000 {
-            schema.generate_row(&mut rng, "\t");
-            if i < 999 {
-                result.push('\n');
-            }
-        }
+        schema.generate_rows(&mut rng, "\t", 1000);
     });
 }
-
-/*#[bench]
-fn bench_generate_1000_complex_rows_threaded(b: &mut Bencher) {
-    b.iter(|| {
-        for _ in 0..2 {
-            thread::spawn(|| {
-                let mut rng = rand::thread_rng();
-                for _ in 0..500 {
-                    gen_complex_row(&mut rng);
-                }
-            });
-        }
-    });
-}*/
