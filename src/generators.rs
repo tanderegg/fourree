@@ -1,11 +1,14 @@
 extern crate rand;
+extern crate pad;
 
 // use std::str::from_utf8;
 use rand::Rng;
 use rand::distributions::{IndependentSample, Range, Normal};
+use self::pad::PadStr;
 
 const UPPERCASE_CHARS: &'static str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
+/// Convenience struct for representing a date in the form MM/DD/YYYY
 pub struct Date {
     day: u8,
     month: u8,
@@ -14,7 +17,7 @@ pub struct Date {
 
 impl ToString for Date {
     fn to_string(&self) -> String {
-        self.month.to_string() + "/" + &self.day.to_string() + "/" + &self.year.to_string()
+        self.year.to_string() + "-" + &self.month.to_string().pad_to_width_with_char(2, '0') + "/" + &self.day.to_string().pad_to_width_with_char(2, '0')
     }
 }
 
@@ -99,6 +102,10 @@ pub fn generate_date<R: rand::Rng>(rng: &mut R) -> Date {
 /// let x = vec!["A", "B", "C"];
 /// let y = generate_choice(&mut rng, &x);
 ///
-pub fn generate_choice<'a, R: rand::Rng, T>(rng: &mut R, choices: &'a [T]) -> &'a T {
-    &rng.choose(choices).unwrap()
+pub fn generate_choice<R: rand::Rng, T: ToString>(rng: &mut R, choices: &[T], length: usize) -> String {
+    let mut output = String::with_capacity(length);
+    for _ in 0..length {
+        output.push_str(&rng.choose(choices).unwrap().to_string());
+    }
+    output
 }
