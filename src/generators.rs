@@ -1,10 +1,10 @@
 extern crate rand;
 extern crate pad;
+extern crate num;
 
-// use std::str::from_utf8;
 use rand::Rng;
 use rand::distributions::{IndependentSample, Range, Normal};
-use self::pad::PadStr;
+use self::pad::{PadStr, Alignment};
 
 const UPPERCASE_CHARS: &'static str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -17,7 +17,7 @@ pub struct Date {
 
 impl ToString for Date {
     fn to_string(&self) -> String {
-        self.year.to_string() + "-" + &self.month.to_string().pad_to_width_with_char(2, '0') + "/" + &self.day.to_string().pad_to_width_with_char(2, '0')
+        self.year.to_string() + "-" + &self.month.to_string().pad(2, '0', Alignment::Right, false) + "-" + &self.day.to_string().pad(2, '0', Alignment::Right, false)
     }
 }
 
@@ -62,9 +62,9 @@ pub fn generate_string<R: rand::Rng>(rng: &mut R, length: usize) -> String {
 ///
 /// let x = generate_gauss(&mut rng, 10, 2);
 ///
-pub fn generate_gauss<R: rand::Rng>(rng: &mut R, mean: u64, std_dev: u64) -> u64 {
+pub fn generate_gauss<R: rand::Rng>(rng: &mut R, mean: i32, std_dev: i32) -> i32 {
     let dist = Normal::new(mean as f64, std_dev as f64);
-    dist.ind_sample(rng) as u64
+    dist.ind_sample(rng) as i32
 }
 
 /// Generates a date (as a string for now)
@@ -77,8 +77,8 @@ pub fn generate_date<R: rand::Rng>(rng: &mut R) -> Date {
     let mut bytes = [0u8; 3];
     rng.fill_bytes(&mut bytes);
 
-    let month: u8 = ((bytes[0] as u16 * 12) / 255) as u8;
-    let year: u16 = (((bytes[1] as u16 * 116) / 255) + 1900) as u16;
+    let month = ((bytes[0] as u16 * 11) / 255) as u8 + 1;
+    let year = (((bytes[1] as u16 * 115) / 255) + 1900) as u16 + 1;
 
     let day_range = match month {
         1 | 3 | 5 | 7...8 | 10 | 12 => 31,
@@ -86,12 +86,12 @@ pub fn generate_date<R: rand::Rng>(rng: &mut R) -> Date {
         _ => 30
     };
 
-    let day = ((bytes[2] as u16 * day_range) / 255) as u8;
+    let day  = ((bytes[2] as u16 * (day_range - 1)) / 255) as u8 + 1;
 
     Date {
-        month: month as u8,
-        day: day as u8,
-        year: year as u16
+        month: month,
+        day: day,
+        year: year
     }
 }
 
@@ -100,7 +100,7 @@ pub fn generate_date<R: rand::Rng>(rng: &mut R) -> Date {
 /// # Examples
 ///
 /// let x = vec!["A", "B", "C"];
-/// let y = generate_choice(&mut rng, &x);
+/// let y = generate_choice(&mut rng, &x, 1);
 ///
 pub fn generate_choice<R: rand::Rng, T: ToString>(rng: &mut R, choices: &[T], length: usize) -> String {
     let mut output = String::with_capacity(length);

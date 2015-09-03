@@ -155,23 +155,25 @@ fn main() {
     info!("Loading schema from: {:?}", input_file);
 
     let start_time = time::precise_time_s();
+    let output_thread;
 
     // Load and generate the data, sending it to OutputMode
     match load_schema_from_file(&input_file) {
         Ok(schema) => {
-            let output_channel = initialize_output_thread(output_mode);
+            let (output_channel, t) = initialize_output_thread(output_mode);
+            output_thread = t;
+            let num_batches = num_rows / batch_size;
 
             if num_threads > 1 {
-                let batches = num_rows / batch_size;
-                let batches_per_thread = batches / num_threads;
-                let mut threads = Vec::with_capacity(num_threads as usize);
+                let batches_per_thread = num_batches / num_threads;
+                let mut handles = Vec::with_capacity(num_threads as usize);
                 let schema_ref = Arc::new(schema);
 
                 // For each thread...
                 for _ in 0..num_threads {
                     let thread_schema = schema_ref.clone();
                     let thread_channel = output_channel.clone();
-                    threads.push(thread::spawn(move || {
+                    handles.push(thread::spawn(move || {
                         let mut rng = rand::thread_rng();
 
                         // Use caluclated number of batches to run per thread...
@@ -185,26 +187,22 @@ fn main() {
                     }));
                 }
 
-                for thread in threads {
-                    info!("{:?} completed.", thread.join().unwrap());
+                // Wait for generator threads to complete
+                for handle in handles {
+                    //let name = handle.thread().name().unwrap();
+                    handle.join().unwrap();
+                    info!("Thread completed.");
                 }
+
+                // output_sender goes out of scope here, thus causing the output thread to terminate
             } else {
                 let mut rng = rand::thread_rng();
-                let mut batch_start = time::precise_time_s();
-                let mut batch = String::new();
 
-                for i in 0..num_rows {
-                    let row = schema.generate_row(&mut rng, "\t");
-                    debug!("{}", row);
-                    batch.push_str(&row);
-                    batch.push('\n');
-
-                    if i % batch_size == 0 {
-                        let batch_elapsed = time::precise_time_s();
-                        info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
-                        batch = String::new();
-                        batch_start = time::precise_time_s();
-                    }
+                for _ in 0..num_batches {
+                    let batch_start = time::precise_time_s();
+                    output_channel.send(schema.generate_rows(&mut rng, "\t", batch_size)).unwrap();
+                    let batch_elapsed = time::precise_time_s();
+                    info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
                 }
             }
         }
@@ -214,16 +212,23 @@ fn main() {
         }
     }
 
+    // Now wait for output thread to complete
+    output_thread.join().unwrap();
+    info!("Output thread completed.");
+
     let end_time = time::precise_time_s();
     info!("Elapsed time: {} s", end_time-start_time);
 }
 
-fn initialize_output_thread(output_mode: OutputMode) -> Sender<String> {
+fn initialize_output_thread(output_mode: OutputMode) -> (Sender<String>, std::thread::JoinHandle<()>) {
     let (sender, receiver) = channel();
-    thread::spawn(move || {
+    let thread = thread::spawn(move || {
         loop {
             let output = match receiver.recv() {
-                Ok(message) => message,
+                Ok(message) => {
+                    info!("Flushing output queue.");
+                    message
+                }
                 Err(_) => {
                     info!("Schema generation complete.");
                     break;
@@ -231,10 +236,10 @@ fn initialize_output_thread(output_mode: OutputMode) -> Sender<String> {
             };
 
             match output_mode {
-                OutputMode::Stdout => println!("{}", output),
+                OutputMode::Stdout => print!("{}", output),
                 _ => ()
             }
         }
     });
-    sender
+    (sender, thread)
 }

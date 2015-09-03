@@ -10,7 +10,7 @@ trait Generator {
 pub enum FieldGenerator {
     NoGen,
     Integer { min: i64, max: i64 },
-    Gauss { mean: u64, std_dev: u64 },
+    Gauss { mean: i32, std_dev: i32 },
     Date,
     String { length: usize },
     Choice { choices: Vec<String>, length: usize }
@@ -61,12 +61,12 @@ impl Schema {
         for field in self.fields.iter() {
             result.push(field.generate(rng));
         }
-        result.as_slice().join(delim)
+        result.join(delim)
     }
 
     pub fn generate_rows(&self, rng: &mut rand::ThreadRng, delim: &str, size: u64) -> String {
         let mut output = String::new();
-        // And Generate <batch_size> rows per batch
+
         for _ in 0..size.clone() {
             let row = self.generate_row(rng, delim);
             debug!("{}", row);
