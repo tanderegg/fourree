@@ -3,6 +3,8 @@
 
 extern crate rand;
 extern crate serde;
+
+#[macro_use]
 extern crate log;
 
 pub mod generators;

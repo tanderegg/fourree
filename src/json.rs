@@ -253,7 +253,7 @@ fn parse_integer<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator,
             Err(err) => return Err(err)
         };
 
-    Ok(FieldGenerator::Integer(min, max))
+    Ok(FieldGenerator::Integer{ min: min, max: max })
 }
 
 fn parse_gauss<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, String> {
@@ -261,7 +261,7 @@ fn parse_gauss<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, S
         match obj.get("mean")
                  .ok_or("Mean is required for a gauss distribution field.".to_string())
                  .and_then(|std_dev| {
-                    std_dev.as_u64()
+                    std_dev.as_i64()
                            .ok_or("Mean must be a number!".to_string())
                  })
         {
@@ -272,7 +272,7 @@ fn parse_gauss<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, S
         match obj.get("mean")
                  .ok_or("Std deviation is required for a gauss distribution field.".to_string())
                  .and_then(|std_dev| {
-                    std_dev.as_u64()
+                    std_dev.as_i64()
                            .ok_or("Std deviation must be a number!".to_string())
                  })
         {
@@ -280,7 +280,7 @@ fn parse_gauss<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, S
             Err(err) => return Err(err)
         };
 
-    Ok(FieldGenerator::Gauss(mean, std_dev))
+    Ok(FieldGenerator::Gauss{ mean: mean as i32, std_dev: std_dev as i32 })
 }
 
 fn parse_string<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, String> {
@@ -296,7 +296,7 @@ fn parse_string<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, 
             Err(err) => return Err(err)
         };
 
-    Ok(FieldGenerator::String(length))
+    Ok(FieldGenerator::String{ length: length })
 }
 
 fn parse_date() -> Result<FieldGenerator, String> {
@@ -304,6 +304,14 @@ fn parse_date() -> Result<FieldGenerator, String> {
 }
 
 fn parse_choice<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, String> {
+    let length = match obj.get("length") {
+        Some(length) => {
+            let l = length.as_u64().ok_or("Length must be a positive integer!".to_string()).ok().unwrap();
+            l as usize
+        }
+        _ => 1 as usize
+    };
+
     obj.get("choices")
        .ok_or("A Choice field must have choices!".to_string())
        .and_then(|a| {
@@ -320,6 +328,6 @@ fn parse_choice<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, 
                     None => return Err("All choices must be strings.".to_string())
                 }
             }
-            Ok(FieldGenerator::Choice(choices))
+            Ok(FieldGenerator::Choice{ choices: choices, length: length })
        })
 }

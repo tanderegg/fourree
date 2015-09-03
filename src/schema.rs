@@ -1,4 +1,3 @@
-
 use std::fmt;
 use rand;
 
@@ -10,11 +9,11 @@ trait Generator {
 
 pub enum FieldGenerator {
     NoGen,
-    Integer(i64, i64),
-    Gauss(u64, u64),
+    Integer { min: i64, max: i64 },
+    Gauss { mean: i32, std_dev: i32 },
     Date,
-    String(usize),
-    Choice(Vec<String>)
+    String { length: usize },
+    Choice { choices: Vec<String>, length: usize }
 }
 
 pub struct Field {
@@ -26,20 +25,20 @@ pub struct Field {
 impl Generator for Field {
     fn generate<R: rand::Rng>(&self, rng: &mut R) -> String {
         match self.generator {
-            FieldGenerator::Integer(min, max) => {
+            FieldGenerator::Integer{ min, max } => {
                 generate_integer(rng, min, max).to_string()
             }
-            FieldGenerator::Gauss(mean, std_dev) => {
+            FieldGenerator::Gauss{ mean, std_dev } => {
                 generate_gauss(rng, mean, std_dev).to_string()
             }
-            FieldGenerator::String(length) => {
+            FieldGenerator::String{ length } => {
                 generate_string(rng, length)
             }
             FieldGenerator::Date => {
                 generate_date(rng).to_string()
             }
-            FieldGenerator::Choice(ref choices) => {
-                generate_choice(rng, choices.as_slice()).to_string()
+            FieldGenerator::Choice{ ref choices, length } => {
+                generate_choice(rng, choices.as_slice(), length).to_string()
             }
             _ => "None".to_string()
         }
@@ -62,7 +61,19 @@ impl Schema {
         for field in self.fields.iter() {
             result.push(field.generate(rng));
         }
-        result.as_slice().join(delim)
+        result.join(delim)
+    }
+
+    pub fn generate_rows(&self, rng: &mut rand::ThreadRng, delim: &str, size: u64) -> String {
+        let mut output = String::new();
+
+        for _ in 0..size.clone() {
+            let row = self.generate_row(rng, delim);
+            debug!("{}", row);
+            output.push_str(&row);
+            output.push('\n');
+        }
+        output
     }
 }
 
