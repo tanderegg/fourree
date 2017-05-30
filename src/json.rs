@@ -5,15 +5,13 @@ use std::fs::File;
 
 use schema::{Schema, Field, FieldGenerator};
 
-/// load_schema_from_file takes a filename as input, then
-/// parses is according to the Fourree format.
-/// Any parsing errors cause the process to abort
-/// return the error.
+/// Takes a filename as input, then parses it according to the Fourree format.
+/// Any parsing errors cause the process to abort.
 ///
 /// # Examples
-///
+/// ```
 /// let result = load_schema_from_file("myfile.json");
-///
+/// ```
 pub fn load_schema_from_file<'input>(file_name: &'input str) -> Result<Schema, String> {
     // Open the file, extract contents as a string, and load the schema
     let mut raw_json = String::new();
@@ -29,36 +27,29 @@ pub fn load_schema_from_file<'input>(file_name: &'input str) -> Result<Schema, S
         })
 }
 
-/// load_schema takes a string as input, then
-/// parses is according to the Fourree format.
-/// Any parsing errors cause the process to abort
-/// return the error.
+/// Takes a string as input, then parses is according to the Fourree format.
+/// Any parsing errors cause the process to abort return the error.
 ///
 /// # Examples
-///
+/// ```
 /// let result = load_schema("{\"table_name\": \"my_table\", \"fields\": []}");
-///
+/// ```
 pub fn parse_json(raw_json: String) -> Result<Schema, String> {
-    // Parse the string with serde as JSON
-    /*let json: Value =
-        match json::from_str(&raw_json) {
-            Ok(j)       => j,
-            Err(err)    => return Err(err.to_string())
-        };*/
-    let json_parsed: Value = from_str(&raw_json).unwrap();
+    let json_parsed: Value = from_str(&raw_json).expect("Invalid JSON string!");
 
     json_parsed.as_object()
         .ok_or("Root JSON value must be an object.".to_string())
         .and_then(|j| {
              parse_schema(j.clone())
         })
-
-    /*match json_deser {
-        Ok(json) => parse_schema(json),
-        Err(err) => Err(err)
-    }*/
 }
 
+/// Parses a given JSON Map formatted schema
+///
+/// # Examples
+/// ```
+/// let result = parse_schema(json_map)
+/// ```
 fn parse_schema(json: Map<String, Value>) -> Result<Schema, String> {
 
     let table_name =
@@ -86,46 +77,20 @@ fn parse_schema(json: Map<String, Value>) -> Result<Schema, String> {
                 Err(err) => Err(err)
             }
         })
-
-    /*let json_object =
-        match json.as_object() {
-            Some(o) => o,
-            None => return Err()
-        };*/
-
-    // We must have a "table_name" field, or else
-    // return with the error.
-
-
-    // This was when I was doing the match as a separate step
-    // Perhaps slightly more readible, but needs an
-    // extraneous temp variable
-    /*let table_name = match table_name_result {
-        Ok(name) => name,
-        Err(err) => return Err(err.to_string())
-    };*/
-
-    // Here it is using early returns only
-    // Maybe more readable, but fairly longwinded
-    // and less clear at a glance what the purpose is
-    /*match json_object.get("table_name") {
-        Some(name) => {
-            match *name {
-                Value::String(ref string) => table_name = string.clone(),
-                _ => return Err("Table name must be a string!".to_string())
-            }
-        }
-        None => {
-            return Err("Table name must be specified!".to_string())
-        }
-    }*/
 }
 
+/// Loops through all the fields provided by the schema, and validates them.
+///
+/// # Examples
+/// ```
+/// let result = parse_fields(fields, schema);
+/// ```
 fn parse_fields(fields: Vec<Value>, schema: &mut Schema) -> Result<String, String> {
     for field in fields.iter() {
         match field.as_object() {
             Some(obj) => {
                 match parse_field(obj) {
+                    // TODO: Rather than take a mutable schema object, create it and return it
                     Ok(f) => schema.add_field(f),
                     Err(err) => return Err(err)
                 }
@@ -138,6 +103,22 @@ fn parse_fields(fields: Vec<Value>, schema: &mut Schema) -> Result<String, Strin
     Ok("Success".to_string())
 }
 
+/// Takes a Map of the metadata for a field, validates it, and returns a Field object.  the
+/// proper generator is selected at this time.
+///
+/// # Examples
+/// ```
+/// let field_data = json!("
+/// {
+///   "name": "myfield",
+///   "data_type": "integer",
+///   "generator": "gauss",
+///   "mean": 1000,
+///   "std_dev": 100
+/// }
+/// ")
+/// let result = parse_field(field_data.as_object().unwrap())
+/// ```
 fn parse_field<'a>(obj: &'a Map<String, Value>) -> Result<Field, String> {
     let field_name =
         match obj.get("name")
@@ -218,6 +199,21 @@ fn parse_field<'a>(obj: &'a Map<String, Value>) -> Result<Field, String> {
     })
 }
 
+/// Parses an integer field and creates the generator for it, which chooses a random value
+/// between min and max.
+/// # Examples
+/// ```
+/// let field_data = json!("
+/// {
+///   "name": "myfield",
+///   "data_type": "integer",
+///   "generator": "integer",
+///   "min": 1,
+///   "max": 100
+/// }
+/// ")
+/// let integer_generator = parse_integer(field_data.as_object().unwrap()).unwrap()
+/// ```
 fn parse_integer<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let min =
         match obj.get("min")
@@ -246,6 +242,21 @@ fn parse_integer<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, Stri
     Ok(FieldGenerator::Integer{ min: min, max: max })
 }
 
+/// Takes the JSON representation of a Field and produces a Gaussian Generator.
+///
+/// # Examples
+/// ```
+/// let field_data = json!("
+/// {
+///   "name": "myfield",
+///   "data_type": "integer",
+///   "generator": "gauss",
+///   "mean": 1000,
+///   "std_dev": 100
+/// }
+/// ")
+/// let gauss_generator = parse_field(field_data.as_object().unwrap()).unwrap()
+/// ```
 fn parse_gauss<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let mean =
         match obj.get("mean")
@@ -273,6 +284,20 @@ fn parse_gauss<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String
     Ok(FieldGenerator::Gauss{ mean: mean as i32, std_dev: std_dev as i32 })
 }
 
+/// Takes a JSON represntation of a string field and returns a String Generator.
+///
+/// # Examples
+/// ```
+/// let field_data = json!("
+/// {
+///   "name": "myfield",
+///   "data_type": "varchar(6)",
+///   "generator": "string",
+///   "length": 6
+/// }
+/// ")
+/// let string_generator = parse_field(field_data.as_object().unwrap()).unwrap()
+/// ```
 fn parse_string<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let length =
         match obj.get("length")
@@ -289,10 +314,25 @@ fn parse_string<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, Strin
     Ok(FieldGenerator::String{ length: length })
 }
 
+/// Returns a new data generator, which has no configuration options.
 fn parse_date() -> Result<FieldGenerator, String> {
     Ok(FieldGenerator::Date)
 }
 
+/// Takes a JSON representation of a choice field and returns a Choice generator,
+/// which is used for generating strings from a list of options.
+/// # Examples
+/// ```
+/// let field_data = json!("
+/// {
+///   "name": "myfield",
+///   "data_type": "varchar(3)",
+///   "generator": "choice",
+///   "choices": ["1", "2", "3"]
+/// }
+/// ")
+/// let choice_generator = parse_field(field_data.as_object().unwrap()).unwrap()
+/// ```
 fn parse_choice<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let length = match obj.get("length") {
         Some(length) => {
