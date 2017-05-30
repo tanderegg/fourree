@@ -1,5 +1,4 @@
 #![feature(test)]
-#![feature(convert)]
 
 #![allow(non_upper_case_globals)]
 extern crate test;
