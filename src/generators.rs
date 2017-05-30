@@ -6,7 +6,7 @@ use rand::Rng;
 use rand::distributions::{IndependentSample, Range, Normal};
 use self::pad::{PadStr, Alignment};
 
-const UPPERCASE_CHARS: &'static str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+static UPPERCASE_CHARS: &'static [char] = &['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
 
 /// Convenience struct for representing a date in the form MM/DD/YYYY
 pub struct Date {
@@ -27,7 +27,7 @@ impl ToString for Date {
 ///
 /// let x = generate_integer(&mut rng, 0, 10000);
 ///
-pub fn generate_integer<R: rand::Rng>(rng: &mut R, min: i64, max: i64) -> i64 {
+pub fn generate_integer<R: Rng>(rng: &mut R, min: i64, max: i64) -> i64 {
     let dist = Range::new(min, max);
     dist.ind_sample(rng)
 }
@@ -39,13 +39,13 @@ pub fn generate_integer<R: rand::Rng>(rng: &mut R, min: i64, max: i64) -> i64 {
 ///
 /// let x = generate_string(&mut rng, 0, 25);
 ///
-pub fn generate_string<R: rand::Rng>(rng: &mut R, length: usize) -> String {
+pub fn generate_string<R: Rng>(rng: &mut R, length: usize) -> String {
     let dist = Range::new(0, 26);
     let mut result: String = String::with_capacity(length);
 
     for _ in 0..length {
         let index = dist.ind_sample(rng);
-        result.push(UPPERCASE_CHARS.char_at(index as usize));
+        result.push(UPPERCASE_CHARS[index as usize]);
     }
     result
 
@@ -62,7 +62,7 @@ pub fn generate_string<R: rand::Rng>(rng: &mut R, length: usize) -> String {
 ///
 /// let x = generate_gauss(&mut rng, 10, 2);
 ///
-pub fn generate_gauss<R: rand::Rng>(rng: &mut R, mean: i32, std_dev: i32) -> i32 {
+pub fn generate_gauss<R: Rng>(rng: &mut R, mean: i32, std_dev: i32) -> i32 {
     let dist = Normal::new(mean as f64, std_dev as f64);
     dist.ind_sample(rng) as i32
 }
@@ -73,7 +73,7 @@ pub fn generate_gauss<R: rand::Rng>(rng: &mut R, mean: i32, std_dev: i32) -> i32
 ///
 /// let x = generate_date(&mut rng);
 ///
-pub fn generate_date<R: rand::Rng>(rng: &mut R) -> Date {
+pub fn generate_date<R: Rng>(rng: &mut R) -> Date {
     let mut bytes = [0u8; 3];
     rng.fill_bytes(&mut bytes);
 
@@ -102,7 +102,7 @@ pub fn generate_date<R: rand::Rng>(rng: &mut R) -> Date {
 /// let x = vec!["A", "B", "C"];
 /// let y = generate_choice(&mut rng, &x, 1);
 ///
-pub fn generate_choice<R: rand::Rng, T: ToString>(rng: &mut R, choices: &[T], length: usize) -> String {
+pub fn generate_choice<R: Rng, T: ToString>(rng: &mut R, choices: &[T], length: usize) -> String {
     let mut output = String::with_capacity(length);
     for _ in 0..length {
         output.push_str(&rng.choose(choices).unwrap().to_string());

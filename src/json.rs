@@ -1,8 +1,7 @@
-use serde::json::{self, Value};
+use serde_json::{Value, Map, from_str};
 
 use std::io::prelude::*;
 use std::fs::File;
-use std::collections::BTreeMap;
 
 use schema::{Schema, Field, FieldGenerator};
 
@@ -46,7 +45,7 @@ pub fn parse_json(raw_json: String) -> Result<Schema, String> {
             Ok(j)       => j,
             Err(err)    => return Err(err.to_string())
         };*/
-    let json_parsed: Value = json::from_str(&raw_json).unwrap();
+    let json_parsed: Value = from_str(&raw_json).unwrap();
 
     json_parsed.as_object()
         .ok_or("Root JSON value must be an object.".to_string())
@@ -60,42 +59,33 @@ pub fn parse_json(raw_json: String) -> Result<Schema, String> {
     }*/
 }
 
-fn parse_schema(json: BTreeMap<String, Value>) -> Result<Schema, String> {
+fn parse_schema(json: Map<String, Value>) -> Result<Schema, String> {
 
-    let table_name: Result<&str, String> =
-        json.get("table_name")
-            .ok_or("Table name must be specified!".to_string())
-            .and_then(|name| {
-                name.as_string()
-                    .ok_or("Table name must be a string!".to_string())
-            });
+    let table_name =
+        json.get("table_name").expect("Table name must be specified!")
+            .as_str().expect("Table name must be a string!");
 
-    match table_name {
-        Ok(tn) => {
-            let mut schema = Schema {
-                table_name: tn.to_string(),
-                fields: Vec::new()
-            };
+    let mut schema = Schema {
+        table_name: table_name.to_string(),
+        fields: Vec::new()
+    };
 
-            // Now process all the fields in the schema
-            // fields must be an array containing objects
-            json.get("fields")
-                .ok_or("Fields must be provided!".to_string())
-                .and_then(|fields| {
-                    fields.as_array()
-                          .ok_or("Fields must be an array.".to_string())
-                })
-                .and_then(|fields| {
-                    match parse_fields(fields.clone(), &mut schema) {
-                        Ok(_) => {
-                            Ok(schema)
-                        }
-                        Err(err) => Err(err)
-                    }
-                })
-        }
-        Err(err) => Err(err)
-    }
+    // Now process all the fields in the schema
+    // fields must be an array containing objects
+    json.get("fields")
+        .ok_or("Fields must be provided!".to_string())
+        .and_then(|fields| {
+            fields.as_array()
+                  .ok_or("Fields must be an array.".to_string())
+        })
+        .and_then(|fields| {
+            match parse_fields(fields.clone(), &mut schema) {
+                Ok(_) => {
+                    Ok(schema)
+                }
+                Err(err) => Err(err)
+            }
+        })
 
     /*let json_object =
         match json.as_object() {
@@ -148,12 +138,12 @@ fn parse_fields(fields: Vec<Value>, schema: &mut Schema) -> Result<String, Strin
     Ok("Success".to_string())
 }
 
-fn parse_field<'a>(obj: &'a BTreeMap<String, Value>) -> Result<Field, String> {
+fn parse_field<'a>(obj: &'a Map<String, Value>) -> Result<Field, String> {
     let field_name =
         match obj.get("name")
                  .ok_or("Field name is required.".to_string())
                  .and_then(|name| {
-                     name.as_string()
+                     name.as_str()
                          .ok_or("Field name must be a string!".to_string())
                  })
         {
@@ -165,7 +155,7 @@ fn parse_field<'a>(obj: &'a BTreeMap<String, Value>) -> Result<Field, String> {
         match obj.get("data_type")
                  .ok_or("Data type is required.".to_string())
                  .and_then(|data_type| {
-                     data_type.as_string()
+                     data_type.as_str()
                               .ok_or("Data type must be a string!".to_string())
                  })
         {
@@ -177,7 +167,7 @@ fn parse_field<'a>(obj: &'a BTreeMap<String, Value>) -> Result<Field, String> {
         match obj.get("generator")
                  .ok_or("Generator is required.".to_string())
                  .and_then(|data_type| {
-                     data_type.as_string()
+                     data_type.as_str()
                               .ok_or("Generator must be a string!".to_string())
                  })
         {
@@ -228,7 +218,7 @@ fn parse_field<'a>(obj: &'a BTreeMap<String, Value>) -> Result<Field, String> {
     })
 }
 
-fn parse_integer<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, String> {
+fn parse_integer<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let min =
         match obj.get("min")
                  .ok_or("Min is required for an integer field.".to_string())
@@ -256,7 +246,7 @@ fn parse_integer<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator,
     Ok(FieldGenerator::Integer{ min: min, max: max })
 }
 
-fn parse_gauss<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, String> {
+fn parse_gauss<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let mean =
         match obj.get("mean")
                  .ok_or("Mean is required for a gauss distribution field.".to_string())
@@ -283,7 +273,7 @@ fn parse_gauss<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, S
     Ok(FieldGenerator::Gauss{ mean: mean as i32, std_dev: std_dev as i32 })
 }
 
-fn parse_string<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, String> {
+fn parse_string<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let length =
         match obj.get("length")
                  .ok_or("Length is required for a string field.".to_string())
@@ -303,7 +293,7 @@ fn parse_date() -> Result<FieldGenerator, String> {
     Ok(FieldGenerator::Date)
 }
 
-fn parse_choice<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, String> {
+fn parse_choice<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let length = match obj.get("length") {
         Some(length) => {
             let l = length.as_u64().ok_or("Length must be a positive integer!".to_string()).ok().unwrap();
@@ -321,7 +311,7 @@ fn parse_choice<'a>(obj: &'a BTreeMap<String, Value>) -> Result<FieldGenerator, 
        .and_then(|array| {
             let mut choices = Vec::new();
             for choice in array.iter() {
-                match choice.as_string() {
+                match choice.as_str() {
                     Some(c) => {
                         choices.push(c.to_string());
                     }

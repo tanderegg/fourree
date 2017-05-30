@@ -26,6 +26,7 @@ path = "examples/json_schema/main.rs"
 [dependencies]
 rand = "0.3"
 serde = "*"
+serde_json = "*"
 log = "*"
 getopts = "0.2"
 time = "0.1"
