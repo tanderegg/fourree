@@ -1,7 +1,7 @@
-use serde_json::{Value, Map, from_str};
-
 use std::io::prelude::*;
 use std::fs::File;
+
+use serde_json::{Value, Map, from_str};
 
 use schema::{Schema, Field, FieldGenerator};
 
@@ -53,8 +53,12 @@ pub fn parse_json(raw_json: String) -> Result<Schema, String> {
 fn parse_schema(json: Map<String, Value>) -> Result<Schema, String> {
 
     let table_name =
-        json.get("table_name").expect("Table name must be specified!")
-            .as_str().expect("Table name must be a string!");
+        json.get("table_name")
+            .ok_or("Table name must be specified!")
+            .and_then(|tn| {
+                tn.as_str()
+                  .ok_or("Table name must be a string!")
+            })?;
 
     // Now process all the fields in the schema
     // fields must be an array containing objects

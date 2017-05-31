@@ -1,8 +1,25 @@
 use std::fs::File;
-use std::io::Write;
+use std::io::{self, Write};
 
 use log;
 use log::{LogRecord, LogLevel, LogLevelFilter, LogMetadata, SetLoggerError};
+
+pub enum LoggerError {
+    Io(io::Error),
+    SetLogger(SetLoggerError)
+}
+
+impl From<io::Error> for LoggerError {
+    fn from(err: io::Error) -> LoggerError {
+        LoggerError::Io(err)
+    }
+}
+
+impl From<SetLoggerError> for LoggerError {
+    fn from(err: SetLoggerError) -> LoggerError {
+        LoggerError::SetLogger(err)
+    }
+}
 
 struct ConsoleLogger;
 
@@ -23,15 +40,12 @@ struct FileLogger {
 }
 
 impl FileLogger {
-    pub fn new(p: String) -> FileLogger {
-        let file = match File::create(p.clone()) {
-            Ok(f) => f,
-            Err(err) => panic!(err.to_string())
-        };
+    pub fn new(p: String) -> Result<FileLogger, io::Error> {
+        let file = File::create(p.clone())?;
 
-        FileLogger {
+        Ok(FileLogger {
             handle: file
-        }
+        })
     }
 }
 
@@ -49,13 +63,16 @@ impl log::Log for FileLogger {
     }
 }
 
-pub fn init_logger(level: LogLevelFilter, log_path: Option<String>) -> Result<(), SetLoggerError> {
-    log::set_logger(|l| {
-        l.set(level.clone());
+pub fn init_logger(level: LogLevelFilter, log_path: Option<String>) -> Result<(), LoggerError> {
+    let logger: Box<log::Log> = match log_path {
+        Some(ref path) => {
+            Box::new(FileLogger::new(path.clone())?)
+        },
+        None => Box::new(ConsoleLogger)
+    };
 
-        match log_path {
-            Some(ref path) => Box::new(FileLogger::new(path.clone())),
-            None => Box::new(ConsoleLogger)
-        }
-    })
+    Ok(log::set_logger(|l| {
+        l.set(level.clone());
+        logger
+    })?)
 }
