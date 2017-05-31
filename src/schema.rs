@@ -67,7 +67,7 @@ impl Schema {
     pub fn generate_rows(&self, rng: &mut rand::ThreadRng, delim: &str, size: u64) -> String {
         let mut output = String::new();
 
-        for _ in 0..size.clone() {
+        for _ in 0..size {
             let row = self.generate_row(rng, delim);
             debug!("{}", row);
             output.push_str(&row);

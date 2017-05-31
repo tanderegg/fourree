@@ -16,11 +16,6 @@ use log::LogLevelFilter;
 use fourree::json::{load_schema_from_file};
 use fourree::logger::init_logger;
 
-fn print_usage(program: &str, opts: Options) {
-    let brief = format!("Usage: {} FILE [options]", program);
-    print!("{}\n", opts.usage(&brief));
-}
-
 const NUM_ROWS_DEFAULT: u64 = 1000;
 const BATCH_SIZE_DEFAULT: u64 = 100;
 const MAX_THREADS: u64 = 128;
@@ -39,6 +34,42 @@ enum LogType {
     File
 }
 
+/// Prints the command line usage options
+fn print_usage(program: &str, opts: Options) {
+    let brief = format!("Usage: {} FILE [options]", program);
+    print!("{}\n", opts.usage(&brief));
+}
+
+/// Creates the thread used to write data to the output (file, database, stdout, etc.)
+///
+/// # Example:
+/// ```
+/// let (output_channel, output_thread) = initialize_output_thread(OutputMode::Stdout, None)
+/// ```
+fn initialize_output_thread(output_mode: OutputMode, _: Option<String>) ->
+        (Sender<String>, std::thread::JoinHandle<()>) {
+    let (sender, receiver) = channel();
+    let thread = thread::spawn(move || {
+        loop {
+            let output = match receiver.recv() {
+                Ok(message) => {
+                    message
+                }
+                Err(_) => {
+                    info!("Schema generation complete.");
+                    break;
+                }
+            };
+
+            match output_mode {
+                OutputMode::Stdout => print!("{}", output),
+                _ => ()
+            }
+        }
+    });
+    (sender, thread)
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
@@ -49,7 +80,7 @@ fn main() {
     opts.optopt("b", "batch_size", "specify the size of each batch to be processed", "BATCH_SIZE");
     opts.optopt("l", "log_file", "specify a file to write the log to", "LOG_FILE_PATH");
     opts.optopt("t", "threads", "specify the number of threads to use (default: 1)", "NUM_THREADS");
-    opts.optopt("o", "output", "specify the desired output (default: none)", "OUTPUT");
+    opts.optopt("o", "output", "specify the desired output (default: stdout)", "OUTPUT");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
@@ -65,15 +96,25 @@ fn main() {
         return;
     }
 
+    // Determine input file, quit if none given
+    let input_file = if !matches.free.is_empty() {
+        matches.free[0].clone()
+    } else {
+        print_usage(&program, opts);
+        return;
+    };
+
+    // Setup logging
     let log_type = if matches.opt_present("l") {
         let file_path = matches.opt_str("l").unwrap().trim().to_string();
         init_logger(LogLevelFilter::Info, Some(file_path.clone())).ok().expect("Failed to initalize logger!");
         LogType::File
     } else {
-        init_logger(LogLevelFilter::Info, None).ok().expect("Failed to initialize logger!");
-        LogType::Console
+        init_logger(LogLevelFilter::Info, Some("fourree.log".to_string())).ok().expect("Failed to initialize logger!");
+        LogType::File
     };
 
+    // Setup number of rows to produce
     let num_rows = if matches.opt_present("n") {
         let rows_opt = matches.opt_str("n").unwrap().trim().to_string();
         info!("Received option: num_rows = {}", rows_opt);
@@ -88,6 +129,7 @@ fn main() {
         NUM_ROWS_DEFAULT
     };
 
+    // Set the batch size per flush to I/O
     let batch_size = if matches.opt_present("b") {
         let batch_opt = matches.opt_str("b").unwrap().trim().to_string();
         info!("Received option: batch_size = {}", batch_opt);
@@ -102,13 +144,7 @@ fn main() {
         BATCH_SIZE_DEFAULT
     };
 
-    let input_file = if !matches.free.is_empty() {
-        matches.free[0].clone()
-    } else {
-        print_usage(&program, opts);
-        return;
-    };
-
+    // Setup number of threads to use for data generation
     let num_threads = if matches.opt_present("t") {
         let thread_opt = matches.opt_str("t").unwrap().trim().to_string();
         info!("Received option: threads = {}", thread_opt);
@@ -130,6 +166,7 @@ fn main() {
         1
     };
 
+    // Set the output mode
     let output_mode = if matches.opt_present("o") {
         let output_opt = matches.opt_str("o").unwrap().trim().to_string();
         info!("Received option: output mode = {}", output_opt);
@@ -141,74 +178,85 @@ fn main() {
                 }
                 OutputMode::Stdout
             }
-            "file"       => OutputMode::File,
-            "postgresql" => OutputMode::Postgresql,
+            "file"       => {
+                warn!("File output is not yet implemented, will be no-op!");
+                OutputMode::File
+            },
+            "postgresql" => {
+                warn!("PostgreSQL output is not yet implemented, will be no-op!");
+                OutputMode::Postgresql
+            },
             _ => {
                 warn!("Unupported output requested: {}, defaulting to 'None'", output_opt);
                 OutputMode::None
             }
         }
     } else {
-        OutputMode::None
+        OutputMode::Stdout
     };
 
     info!("Loading schema from: {:?}", input_file);
 
     let start_time = time::precise_time_s();
-    let output_thread;
 
     // Load and generate the data, sending it to OutputMode
-    match load_schema_from_file(&input_file) {
-        Ok(schema) => {
-            let (output_channel, t) = initialize_output_thread(output_mode);
-            output_thread = t;
-            let num_batches = num_rows / batch_size;
-
-            if num_threads > 1 {
-                let batches_per_thread = num_batches / num_threads;
-                let mut handles = Vec::with_capacity(num_threads as usize);
-                let schema_ref = Arc::new(schema);
-
-                // For each thread...
-                for _ in 0..num_threads {
-                    let thread_schema = schema_ref.clone();
-                    let thread_channel = output_channel.clone();
-                    handles.push(thread::spawn(move || {
-                        let mut rng = rand::thread_rng();
-
-                        // Use caluclated number of batches to run per thread...
-                        for _ in 0..batches_per_thread.clone() {
-                            let batch_start = time::precise_time_s();
-                            let rows = thread_schema.generate_rows(&mut rng, "\t", batch_size.clone());
-                            thread_channel.send(rows).unwrap();
-                            let batch_elapsed = time::precise_time_s();
-                            info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
-                        }
-                    }));
-                }
-
-                // Wait for generator threads to complete
-                for handle in handles {
-                    //let name = handle.thread().name().unwrap();
-                    handle.join().unwrap();
-                    info!("Thread completed.");
-                }
-
-                // output_sender goes out of scope here, thus causing the output thread to terminate
-            } else {
-                let mut rng = rand::thread_rng();
-
-                for _ in 0..num_batches {
-                    let batch_start = time::precise_time_s();
-                    output_channel.send(schema.generate_rows(&mut rng, "\t", batch_size)).unwrap();
-                    let batch_elapsed = time::precise_time_s();
-                    info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
-                }
-            }
-        }
+    let schema = match load_schema_from_file(&input_file) {
+        Ok(s) => s,
         Err(err) => {
             error!("{}", err);
             return;
+        }
+    };
+
+    // Define output_thread out of scope, so it will live beyond the data generation threads
+    // and the output_channel.
+    let output_thread;
+    {
+        let (output_channel, ot) = initialize_output_thread(output_mode, None);
+        output_thread = ot;
+
+        let num_batches = num_rows / batch_size;
+
+        if num_threads > 1 {
+            let batches_per_thread = num_batches / num_threads;
+            let mut handles = Vec::with_capacity(num_threads as usize);
+            let schema_ref = Arc::new(schema);
+
+            for _ in 0..num_threads {
+                let thread_schema = schema_ref.clone();
+                let thread_channel = output_channel.clone();
+                handles.push(thread::spawn(move || {
+                    let mut rng = rand::thread_rng();
+
+                    // Use caluclated number of batches to run per thread
+                    for _ in 0..batches_per_thread.clone() {
+                        let batch_start = time::precise_time_s();
+                        let rows = thread_schema.generate_rows(&mut rng, "\t", batch_size.clone());
+                        thread_channel.send(rows).unwrap();
+                        let batch_elapsed = time::precise_time_s();
+                        info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
+                    }
+                }));
+            }
+
+            // Wait for generator threads to complete
+            for handle in handles {
+                //let name = handle.thread().name().unwrap();
+                handle.join().unwrap();
+                info!("Thread completed.");
+            }
+
+            // output_channel goes out of scope here, thus causing the output thread to terminate
+        } else {
+            let mut rng = rand::thread_rng();
+
+            for _ in 0..num_batches {
+                let batch_start = time::precise_time_s();
+                info!("Flushing output queue.");
+                output_channel.send(schema.generate_rows(&mut rng, "\t", batch_size)).unwrap();
+                let batch_elapsed = time::precise_time_s();
+                info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
+            }
         }
     }
 
@@ -218,28 +266,4 @@ fn main() {
 
     let end_time = time::precise_time_s();
     info!("Elapsed time: {} s", end_time-start_time);
-}
-
-fn initialize_output_thread(output_mode: OutputMode) -> (Sender<String>, std::thread::JoinHandle<()>) {
-    let (sender, receiver) = channel();
-    let thread = thread::spawn(move || {
-        loop {
-            let output = match receiver.recv() {
-                Ok(message) => {
-                    info!("Flushing output queue.");
-                    message
-                }
-                Err(_) => {
-                    info!("Schema generation complete.");
-                    break;
-                }
-            };
-
-            match output_mode {
-                OutputMode::Stdout => print!("{}", output),
-                _ => ()
-            }
-        }
-    });
-    (sender, thread)
 }
