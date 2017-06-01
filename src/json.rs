@@ -60,6 +60,14 @@ fn parse_schema(json: Map<String, Value>) -> Result<Schema, String> {
                   .ok_or("Table name must be a string!")
             })?;
 
+    let delimiter =
+        match json.get("delimiter") {
+            Some(d) => d.as_str().ok_or("Delimiter must be a string!")?,
+            None => {
+                "\t"
+            }
+        };
+
     // Now process all the fields in the schema
     // fields must be an array containing objects
     json.get("fields")
@@ -69,7 +77,7 @@ fn parse_schema(json: Map<String, Value>) -> Result<Schema, String> {
                   .ok_or("Fields must be an array.".to_string())
         })
         .and_then(|fields| {
-            parse_fields(fields.clone(), table_name)
+            parse_fields(fields.clone(), table_name, delimiter)
         })
 }
 
@@ -79,15 +87,20 @@ fn parse_schema(json: Map<String, Value>) -> Result<Schema, String> {
 /// ```
 /// let result = parse_fields(fields, schema);
 /// ```
-fn parse_fields(fields: Vec<Value>, table_name: &str) -> Result<Schema, String> {
+fn parse_fields(fields: Vec<Value>, table_name: &str, delimiter: &str) -> Result<Schema, String> {
     let mut schema = Schema {
         table_name: table_name.to_string(),
+        delimiter: delimiter.to_string(),
         fields: Vec::new()
     };
 
     for field in fields.iter() {
         let obj = field.as_object().ok_or("Each field must be an object")?;
-        schema.add_field(parse_field(obj)?);
+        let field = parse_field(obj)?;
+        if delimiter == "fixed" && field.length.is_none() {
+            return Err("All fields must have a length if delimeter is 'fixed'.".to_string())
+        }
+        schema.add_field(field);
     }
     Ok(schema)
 }
@@ -123,6 +136,16 @@ fn parse_field<'a>(obj: &'a Map<String, Value>) -> Result<Field, String> {
                 .ok_or("Data type must be a string!".to_string())
         })?;
 
+    let length = match obj.get("length") {
+        Some(l) => Some(l.as_u64().ok_or("Length must be a positive integer!")? as usize),
+        None => None
+    };
+
+    let padding = match obj.get("padding") {
+        Some(p) => Some(p.as_str().ok_or("Padding must be a string!")?.to_string()),
+        None => None
+    };
+
     let generator_type = obj.get("generator")
         .ok_or("Generator is required.".to_string())
         .and_then(|data_type| {
@@ -142,6 +165,8 @@ fn parse_field<'a>(obj: &'a Map<String, Value>) -> Result<Field, String> {
     Ok(Field{
         name: field_name.to_string(),
         data_type: data_type.to_string(),
+        padding: padding,
+        length: length,
         generator: generator
     })
 }
@@ -272,10 +297,21 @@ fn parse_choice<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, Strin
        })
        .and_then(|array| {
             let mut choices = Vec::new();
+
+            let mut choice_length = 0;
+
             for choice in array.iter() {
                 let c = choice.as_str().ok_or("All choices must be strings.".to_string())?;
+                if c.len() > choice_length {
+                    choice_length = c.len()
+                }
+
                 choices.push(c.to_string());
             }
-            Ok(FieldGenerator::Choice{ choices: choices, length: length })
+            Ok(FieldGenerator::Choice{
+                choices: choices,
+                choice_length: choice_length,
+                length: length
+            })
        })
 }

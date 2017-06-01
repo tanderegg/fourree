@@ -6,7 +6,7 @@ use rand::Rng;
 use rand::distributions::{IndependentSample, Range, Normal};
 use self::pad::{PadStr, Alignment};
 
-static UPPERCASE_CHARS: &'static [char] = &['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+static UPPERCASE_CHARS: &'static [char] = &['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','0','1','2','3','4','5','6','7','8','9'];
 
 /// Convenience struct for representing a date in the form MM/DD/YYYY
 pub struct Date {
@@ -104,9 +104,13 @@ pub fn generate_date<R: Rng>(rng: &mut R) -> Date {
 /// let x = vec!["A", "B", "C"];
 /// let y = generate_choice(&mut rng, &x, 1);
 ///
-pub fn generate_choice<R: Rng, T: ToString>(rng: &mut R, choices: &[T], length: usize) -> String {
-    let mut output = String::with_capacity(length);
-    for _ in 0..length {
+pub fn generate_choice<R: Rng, T: ToString>(
+    rng: &mut R, choices: &[T],
+    choice_length: usize, length: usize
+) -> String {
+    let num_choices = length / choice_length;
+    let mut output = String::with_capacity(num_choices);
+    for _ in 0..num_choices {
         output.push_str(&rng.choose(choices).unwrap().to_string());
     }
     output

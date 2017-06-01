@@ -231,7 +231,7 @@ fn main() {
                     // Use caluclated number of batches to run per thread
                     for _ in 0..batches_per_thread.clone() {
                         let batch_start = time::precise_time_s();
-                        let rows = thread_schema.generate_rows(&mut rng, "\t", batch_size.clone());
+                        let rows = thread_schema.generate_rows(&mut rng, batch_size.clone()).unwrap();
                         thread_channel.send(rows).unwrap();
                         let batch_elapsed = time::precise_time_s();
                         info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
@@ -253,7 +253,8 @@ fn main() {
             for _ in 0..num_batches {
                 let batch_start = time::precise_time_s();
                 info!("Flushing output queue.");
-                output_channel.send(schema.generate_rows(&mut rng, "\t", batch_size)).unwrap();
+                let rows = schema.generate_rows(&mut rng, batch_size).unwrap();
+                output_channel.send(rows).unwrap();
                 let batch_elapsed = time::precise_time_s();
                 info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
             }
