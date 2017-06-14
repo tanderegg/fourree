@@ -16,9 +16,9 @@ pub struct Date {
 
 impl ToString for Date {
     fn to_string(&self) -> String {
-        self.year.to_string() + "-" +
-        &self.month.to_string().pad(2, '0', Alignment::Right, false) + "-" +
-        &self.day.to_string().pad(2, '0', Alignment::Right, false)
+        self.month.to_string().pad(2, '0', Alignment::Right, false) + "/" +
+        &self.day.to_string().pad(2, '0', Alignment::Right, false) + "/" +
+        &self.year.to_string()
     }
 }
 
