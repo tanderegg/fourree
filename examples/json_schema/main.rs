@@ -21,7 +21,7 @@ fn main() {
     match load_schema_from_file("examples/json_schema/example.json") {
         Ok(schema)  => {
             println!("Schema \"{}\" successfully loaded.", schema);
-            println!("{}", schema.generate_row(&mut rng, "\t"));
+            println!("{}", schema.generate_row(&mut rng).unwrap());
         }
         Err(err)    => {
             println!("{}", err);

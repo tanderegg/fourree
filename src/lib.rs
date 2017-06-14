@@ -1,5 +1,8 @@
+extern crate pad;
 extern crate rand;
 extern crate serde;
+
+#[macro_use]
 extern crate serde_json;
 
 #[macro_use]
