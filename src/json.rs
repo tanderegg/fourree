@@ -142,7 +142,7 @@ fn parse_field<'a>(obj: &'a Map<String, Value>) -> Result<Field, String> {
     };
 
     let padding = match obj.get("padding") {
-        Some(p) => Some(p.as_str().ok_or("Padding must be a string!")?.to_string()),
+        Some(p) => Some(p.as_str().ok_or("Padding must be a string!")?.chars().nth(0).unwrap()),
         None => None
     };
 

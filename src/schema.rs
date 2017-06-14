@@ -1,5 +1,6 @@
 use std::fmt;
 use rand;
+use pad::{PadStr, Alignment};
 
 use generators::*;
 
@@ -20,7 +21,7 @@ pub struct Field {
     pub name: String,
     pub data_type: String,
     pub length: Option<usize>,
-    pub padding: Option<String>,
+    pub padding: Option<char>,
     pub generator: FieldGenerator
 }
 
@@ -69,14 +70,14 @@ impl Schema {
                     format!("'length' is required for a fixed file
                              format, but is missing for field {}", field.name))?;
 
-                let length_diff = field_length - field_data.len();
                 match field.padding {
-                    Some(ref p) => {
-                        let mut temp_string = p.repeat(length_diff);
-                        temp_string.push_str(field_data.as_str());
-                        field_data = temp_string;
+                    Some(p) => {
+                        field_data = field_data
+                            .as_str()
+                            .pad(field_length, p, Alignment::Right, false);
                     },
                     None => {
+                        let length_diff = field_length - field_data.len();
                         if !length_diff == 0 {
                             return Err(format!(
                                 "'padding' is undefined for field {} but
