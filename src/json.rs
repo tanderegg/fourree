@@ -10,7 +10,12 @@ use schema::{Schema, Field, FieldGenerator};
 ///
 /// # Examples
 /// ```
-/// let result = load_schema_from_file("myfile.json");
+/// # extern crate fourree;
+/// use fourree::json::load_schema_from_file;
+///
+/// # fn main() {
+///   let result = load_schema_from_file("myfile.json");
+/// # }
 /// ```
 pub fn load_schema_from_file<'input>(file_name: &'input str) -> Result<Schema, String> {
     // Open the file, extract contents as a string, and load the schema
@@ -32,7 +37,12 @@ pub fn load_schema_from_file<'input>(file_name: &'input str) -> Result<Schema, S
 ///
 /// # Examples
 /// ```
-/// let result = load_schema("{\"table_name\": \"my_table\", \"fields\": []}");
+/// # extern crate fourree;
+/// use fourree::json::parse_json;
+///
+/// # fn main() {
+/// let schema = parse_json("{\"table_name\": \"my_table\", \"fields\": []}".to_string());
+/// # }
 /// ```
 pub fn parse_json(raw_json: String) -> Result<Schema, String> {
     let json_parsed: Value = from_str(&raw_json).expect("Invalid JSON string!");
@@ -48,10 +58,15 @@ pub fn parse_json(raw_json: String) -> Result<Schema, String> {
 ///
 /// # Examples
 /// ```
-/// let result = parse_schema(json_map)
+/// # #[macro_use] extern crate serde_json;
+/// # extern crate fourree;
+/// use fourree::json::{parse_schema, parse_json};
+/// # fn main() {
+///   let schema = json!({"table_name": "my_table", "fields": []});;
+///   let result = parse_schema(schema.as_object().unwrap().clone());
+/// # }
 /// ```
-fn parse_schema(json: Map<String, Value>) -> Result<Schema, String> {
-
+pub fn parse_schema(json: Map<String, Value>) -> Result<Schema, String> {
     let table_name =
         json.get("table_name")
             .ok_or("Table name must be specified!")
@@ -85,9 +100,17 @@ fn parse_schema(json: Map<String, Value>) -> Result<Schema, String> {
 ///
 /// # Examples
 /// ```
-/// let result = parse_fields(fields, schema);
+/// # #[macro_use] extern crate serde_json;
+/// # extern crate fourree;
+/// use fourree::json::{parse_fields, parse_json};
+///
+/// # fn main() {
+///   let schema = json!({"table_name": "my_table", "fields": []});
+///   let fields = schema.get("fields").unwrap().as_array().unwrap();
+///   let result = parse_fields(fields.clone(), "my_table", "\t");
+/// # }
 /// ```
-fn parse_fields(fields: Vec<Value>, table_name: &str, delimiter: &str) -> Result<Schema, String> {
+pub fn parse_fields(fields: Vec<Value>, table_name: &str, delimiter: &str) -> Result<Schema, String> {
     let mut schema = Schema {
         table_name: table_name.to_string(),
         delimiter: delimiter.to_string(),
@@ -110,18 +133,22 @@ fn parse_fields(fields: Vec<Value>, table_name: &str, delimiter: &str) -> Result
 ///
 /// # Examples
 /// ```
-/// let field_data = json!("
-/// {
-///   "name": "myfield",
-///   "data_type": "integer",
-///   "generator": "gauss",
-///   "mean": 1000,
-///   "std_dev": 100
+/// # #[macro_use] extern crate serde_json;
+/// # extern crate fourree;
+/// use fourree::json::parse_field;
+///
+/// fn main() {
+///   let field_data = json!({
+///     "name": "myfield",
+///     "data_type": "integer",
+///     "generator": "gauss",
+///     "mean": 1000,
+///     "std_dev": 100
+///   });
+///   let result = parse_field(field_data.as_object().unwrap());
 /// }
-/// ")
-/// let result = parse_field(field_data.as_object().unwrap())
 /// ```
-fn parse_field<'a>(obj: &'a Map<String, Value>) -> Result<Field, String> {
+pub fn parse_field<'a>(obj: &'a Map<String, Value>) -> Result<Field, String> {
     let field_name = obj.get("name")
         .ok_or("Field name is required.".to_string())
         .and_then(|name| {
@@ -175,18 +202,22 @@ fn parse_field<'a>(obj: &'a Map<String, Value>) -> Result<Field, String> {
 /// between min and max.
 /// # Examples
 /// ```
-/// let field_data = json!("
-/// {
-///   "name": "myfield",
-///   "data_type": "integer",
-///   "generator": "integer",
-///   "min": 1,
-///   "max": 100
+/// # #[macro_use] extern crate serde_json;
+/// # extern crate fourree;
+/// use fourree::json::parse_integer;
+///
+/// # fn main() {
+///   let field_data = json!({
+///     "name": "myfield",
+///     "data_type": "integer",
+///     "generator": "integer",
+///     "min": 1,
+///     "max": 100
+/// # });
+/// let integer_generator = parse_integer(field_data.as_object().unwrap()).unwrap();
 /// }
-/// ")
-/// let integer_generator = parse_integer(field_data.as_object().unwrap()).unwrap()
 /// ```
-fn parse_integer<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
+pub fn parse_integer<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let min = obj.get("min")
         .ok_or("Min is required for an integer field.".to_string())
         .and_then(|min| {
@@ -208,18 +239,22 @@ fn parse_integer<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, Stri
 ///
 /// # Examples
 /// ```
-/// let field_data = json!("
-/// {
+/// # #[macro_use] extern crate serde_json;
+/// # extern crate fourree;
+///
+/// use fourree::json::parse_gauss;
+/// # fn main() {
+/// let field_data = json!({
 ///   "name": "myfield",
 ///   "data_type": "integer",
 ///   "generator": "gauss",
 ///   "mean": 1000,
 ///   "std_dev": 100
-/// }
-/// ")
-/// let gauss_generator = parse_field(field_data.as_object().unwrap()).unwrap()
+/// });
+/// let gauss_generator = parse_gauss(field_data.as_object().unwrap()).unwrap();
+/// # }
 /// ```
-fn parse_gauss<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
+pub fn parse_gauss<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let mean = obj.get("mean")
         .ok_or("Mean is required for a gauss distribution field.".to_string())
         .and_then(|std_dev| {
@@ -240,17 +275,21 @@ fn parse_gauss<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String
 ///
 /// # Examples
 /// ```
-/// let field_data = json!("
-/// {
-///   "name": "myfield",
-///   "data_type": "varchar(6)",
-///   "generator": "string",
-///   "length": 6
-/// }
-/// ")
-/// let string_generator = parse_field(field_data.as_object().unwrap()).unwrap()
+/// # #[macro_use]
+/// # extern crate serde_json;
+/// # extern crate fourree;
+/// use fourree::json::parse_string;
+/// # fn main() {
+///   let field_data = json!({
+///     "name": "myfield",
+///     "data_type": "varchar(6)",
+///     "generator": "string",
+///     "length": 6
+///   });
+///   let string_generator = parse_string(field_data.as_object().unwrap()).unwrap();
+/// # }
 /// ```
-fn parse_string<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
+pub fn parse_string<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let length = obj.get("length")
         .ok_or("Length is required for a string field.".to_string())
         .and_then(|length| {
@@ -270,17 +309,22 @@ fn parse_date() -> Result<FieldGenerator, String> {
 /// which is used for generating strings from a list of options.
 /// # Examples
 /// ```
-/// let field_data = json!("
-/// {
-///   "name": "myfield",
-///   "data_type": "varchar(3)",
-///   "generator": "choice",
-///   "choices": ["1", "2", "3"]
-/// }
-/// ")
-/// let choice_generator = parse_field(field_data.as_object().unwrap()).unwrap()
+/// # #[macro_use]
+/// # extern crate serde_json;
+/// # extern crate fourree;
+/// use fourree::json::parse_choice;
+///
+/// # fn main() {
+///   let field_data = json!({
+///     "name": "myfield",
+///     "data_type": "varchar(3)",
+///     "generator": "choice",
+///     "choices": ["1", "2", "3"]
+///   });
+///   let choice_generator = parse_choice(field_data.as_object().unwrap()).unwrap();
+/// # }
 /// ```
-fn parse_choice<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
+pub fn parse_choice<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, String> {
     let length = match obj.get("length") {
         Some(length) => {
             let l = length.as_u64().ok_or("Length must be a positive integer!".to_string()).ok().unwrap();
