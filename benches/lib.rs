@@ -2,10 +2,10 @@
 
 #![allow(non_upper_case_globals)]
 extern crate test;
+extern crate rand;
 
 #[macro_use]
 extern crate fourree;
-extern crate rand;
 
 use test::Bencher;
 
@@ -32,7 +32,7 @@ fn gen_simple_row<R: rand::Rng>(rng: &mut R) -> String {
         generate_gauss(rng, 10000, 1000),
         generate_string(rng, 64),
         generate_date(rng),
-        generate_choice(rng, &choices, 1)
+        generate_choice(rng, &choices, 2, 2)
     ]
 }
 
@@ -42,7 +42,7 @@ fn gen_complex_row<R: rand::Rng>(rng: &mut R) -> String {
         generate_gauss(rng, 4000, 1000),
         generate_gauss(rng, 4000, 1000),
         generate_integer(rng, 0, 1000000),
-        generate_choice(rng, &choices, 1),
+        generate_choice(rng, &choices, 2, 2),
         generate_string(rng, 32),
         generate_integer(rng, 0, 1000000),
         generate_integer(rng, 0, 1000000),
@@ -50,12 +50,12 @@ fn gen_complex_row<R: rand::Rng>(rng: &mut R) -> String {
         generate_integer(rng, 0, 1000000),
         generate_string(rng, 32),
         generate_date(rng),
-        generate_choice(rng, &choices, 24),
+        generate_choice(rng, &choices, 2, 48),
         generate_date(rng),
         generate_gauss(rng, 4000, 1000),
         generate_date(rng),
         generate_integer(rng, 0, 1000000),
-        generate_choice(rng, &choices, 1),
+        generate_choice(rng, &choices, 2, 2),
         generate_integer(rng, 0, 1000000),
         generate_gauss(rng, 4000, 1000),
         generate_gauss(rng, 4000, 1000),
@@ -64,31 +64,31 @@ fn gen_complex_row<R: rand::Rng>(rng: &mut R) -> String {
         generate_date(rng),
         generate_date(rng),
         generate_date(rng),
-        generate_choice(rng, &choices, 1),
+        generate_choice(rng, &choices, 2, 2),
         generate_string(rng, 32),
-        generate_choice(rng, &choices, 1),
-        generate_choice(rng, &choices, 1),
-        generate_choice(rng, &choices, 32),
+        generate_choice(rng, &choices, 2, 2),
+        generate_choice(rng, &choices, 2, 2),
+        generate_choice(rng, &choices, 2, 64),
         generate_integer(rng, 0, 1000000),
         generate_integer(rng, 0, 1000000),
         generate_integer(rng, 0, 1000000),
-        generate_choice(rng, &choices, 1),
+        generate_choice(rng, &choices, 2, 2),
         generate_string(rng, 32),
         generate_integer(rng, 0, 1000000),
         generate_integer(rng, 0, 1000000),
         generate_string(rng, 32),
         generate_string(rng, 64),
-        generate_choice(rng, &choices, 1),
-        generate_choice(rng, &choices, 1),
+        generate_choice(rng, &choices, 2, 2),
+        generate_choice(rng, &choices, 2, 2),
         generate_string(rng, 32),
         generate_date(rng),
         generate_string(rng, 32),
         generate_date(rng),
         generate_string(rng, 32),
-        generate_choice(rng, &choices, 1),
+        generate_choice(rng, &choices, 2, 2),
         generate_string(rng, 64),
-        generate_choice(rng, &choices, 1),
-        generate_choice(rng, &choices, 1),
+        generate_choice(rng, &choices, 2, 2),
+        generate_choice(rng, &choices, 2, 2),
         generate_date(rng),
         generate_string(rng, 128)
     ]
@@ -122,7 +122,7 @@ fn bench_generate_date(b: &mut Bencher) {
 fn bench_generate_choice(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
     let ex_choices = vec!["X", "A", "H", "B", "C", "D", "E", "F", "G"];
-    b.iter(|| { String::new() + &generate_choice(&mut rng, ex_choices.as_slice(), 1).to_string(); });
+    b.iter(|| { String::new() + &generate_choice(&mut rng, ex_choices.as_slice(), 2, 2).to_string(); });
 }
 
 #[bench]
@@ -161,7 +161,7 @@ fn bench_generate_simple_row_from_file(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        schema.generate_row(&mut rng, "\t");
+        schema.generate_row(&mut rng).unwrap();
     });
 }
 
@@ -171,7 +171,7 @@ fn bench_generate_complex_row_from_file(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        schema.generate_row(&mut rng, "\t");
+        schema.generate_row(&mut rng).unwrap();
     });
 }
 
@@ -181,6 +181,6 @@ fn bench_generate_1000_complex_rows_from_file(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        schema.generate_rows(&mut rng, "\t", 1000);
+        schema.generate_rows(&mut rng, 1000).unwrap();
     });
 }
