@@ -6,6 +6,8 @@ extern crate fourree;
 #[macro_use]
 extern crate log;
 
+use std::io;
+use std::io::Write;
 use std::env;
 use std::thread;
 use std::sync::Arc;
@@ -50,6 +52,10 @@ fn initialize_output_thread(output_mode: OutputMode, _: Option<String>) ->
         (Sender<String>, std::thread::JoinHandle<()>) {
     let (sender, receiver) = channel();
     let thread = thread::spawn(move || {
+
+        let stdout = io::stdout();
+        let mut stdout_lock = stdout.lock();
+
         loop {
             let output = match receiver.recv() {
                 Ok(message) => {
@@ -62,7 +68,9 @@ fn initialize_output_thread(output_mode: OutputMode, _: Option<String>) ->
             };
 
             match output_mode {
-                OutputMode::Stdout => print!("{}", output),
+                OutputMode::Stdout => {
+                    writeln!(stdout_lock, "{}", output).unwrap();
+                },
                 _ => ()
             }
         }
