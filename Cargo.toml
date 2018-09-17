@@ -1,6 +1,6 @@
 [package]
 name = "fourree"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["Tim Anderegg <timothy.anderegg@cfpb.gov>"]
 
 [lib]
