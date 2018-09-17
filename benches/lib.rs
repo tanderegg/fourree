@@ -30,6 +30,7 @@ fn gen_simple_row<R: rand::Rng>(rng: &mut R) -> String {
         "\t";
         generate_integer(rng, 0, 100000),
         generate_gauss(rng, 10000, 1000),
+        generate_gauss_f32(rng, 10000.0, 1000.0),
         generate_string(rng, 64),
         generate_date(rng),
         generate_choice(rng, &choices, 2, 2)
@@ -40,7 +41,7 @@ fn gen_complex_row<R: rand::Rng>(rng: &mut R) -> String {
     gen_row![
         "\t";
         generate_gauss(rng, 4000, 1000),
-        generate_gauss(rng, 4000, 1000),
+        generate_gauss_f32(rng, 4000.0, 1000.0),
         generate_integer(rng, 0, 1000000),
         generate_choice(rng, &choices, 2, 2),
         generate_string(rng, 32),
@@ -97,32 +98,38 @@ fn gen_complex_row<R: rand::Rng>(rng: &mut R) -> String {
 #[bench]
 fn bench_generate_integer(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
-    b.iter(|| { String::new() + &generate_integer(&mut rng, 0, 1000000).to_string(); });
+    b.iter(|| { generate_integer(&mut rng, 0, 1000000).to_string(); });
 }
 
 #[bench]
 fn bench_generate_string(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
-    b.iter(|| { String::new() + &generate_string(&mut rng, 25); });
+    b.iter(|| { generate_string(&mut rng, 25); });
 }
 
 #[bench]
 fn bench_generate_gauss(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
-    b.iter(|| { String::new() + &generate_gauss(&mut rng, 100, 20).to_string(); });
+    b.iter(|| { generate_gauss(&mut rng, 100, 20).to_string(); });
+}
+
+#[bench]
+fn bench_generate_gauss_f32(b: &mut Bencher) {
+    let mut rng = rand::thread_rng();
+    b.iter(|| { generate_gauss_f32(&mut rng, 100.0, 20.0).to_string(); });
 }
 
 #[bench]
 fn bench_generate_date(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
-    b.iter(|| { String::new() + &generate_date(&mut rng).to_string(); });
+    b.iter(|| { generate_date(&mut rng).to_string(); });
 }
 
 #[bench]
 fn bench_generate_choice(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
     let ex_choices = vec!["X", "A", "H", "B", "C", "D", "E", "F", "G"];
-    b.iter(|| { String::new() + &generate_choice(&mut rng, ex_choices.as_slice(), 2, 2).to_string(); });
+    b.iter(|| { generate_choice(&mut rng, ex_choices.as_slice(), 2, 2).to_string(); });
 }
 
 #[bench]

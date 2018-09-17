@@ -68,6 +68,18 @@ pub fn generate_gauss<R: Rng>(rng: &mut R, mean: i32, std_dev: i32) -> i32 {
     dist.ind_sample(rng) as i32
 }
 
+/// Generates an float from a normal (Gaussian) distribution
+///
+/// # Examples
+///
+/// let x = generate_gauss_f32(&mut rng, 10.0, 2.0);
+///
+pub fn generate_gauss_f32<R: Rng>(rng: &mut R, mean: f32, std_dev: f32) -> f32 {
+    let dist = Normal::new(mean as f64, std_dev as f64);
+    dist.ind_sample(rng) as f32
+}
+
+
 /// Generates a date (as a string for now)
 ///
 /// # Examples

@@ -12,6 +12,7 @@ pub enum FieldGenerator {
     NoGen,
     Integer { min: i64, max: i64 },
     Gauss { mean: i32, std_dev: i32 },
+    GaussF32 { mean: f32, std_dev: f32},
     Date,
     String { length: usize },
     Choice { choices: Vec<String>, choice_length: usize, length: usize }
@@ -33,6 +34,9 @@ impl Generator for Field {
             }
             FieldGenerator::Gauss{ mean, std_dev } => {
                 generate_gauss(rng, mean, std_dev).to_string()
+            }
+            FieldGenerator::GaussF32{ mean, std_dev } => {
+                generate_gauss_f32(rng, mean, std_dev).to_string()
             }
             FieldGenerator::String{ length } => {
                 generate_string(rng, length)
