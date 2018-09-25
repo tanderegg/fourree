@@ -258,17 +258,29 @@ pub fn parse_gauss<'a>(obj: &'a Map<String, Value>) -> Result<FieldGenerator, St
     let mean = obj.get("mean")
         .ok_or("Mean is required for a gauss distribution field.".to_string())
         .and_then(|std_dev| {
-            std_dev.as_i64()
+            std_dev.as_f64()
                 .ok_or("Mean must be a number!".to_string())
         })?;
-    let std_dev = obj.get("mean")
+    let std_dev = obj.get("std_dev")
         .ok_or("Std deviation is required for a gauss distribution field.".to_string())
         .and_then(|std_dev| {
-            std_dev.as_i64()
+            std_dev.as_f64()
                 .ok_or("Std deviation must be a number!".to_string())
         })?;
 
-    Ok(FieldGenerator::Gauss{ mean: mean as i32, std_dev: std_dev as i32 })
+    let data_type = obj.get("data_type")
+        .ok_or("Field must have a type.".to_string())
+        .and_then(|data_type| {
+            data_type.as_str()
+                .ok_or("Type must be a string!".to_string())
+        })?;
+
+    // TODO: "double precision" should really be f64, plus other types should be added
+    match data_type {
+        "integer" => Ok(FieldGenerator::Gauss{ mean: mean as i32, std_dev: std_dev as i32 }),
+        "double precision" => Ok(FieldGenerator::GaussF32{ mean: mean as f32, std_dev: std_dev as f32 }),
+        _ => Ok(FieldGenerator::Gauss{ mean: mean as i32, std_dev: std_dev as i32 })
+    }
 }
 
 /// Takes a JSON represntation of a string field and returns a String Generator.
