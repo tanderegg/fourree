@@ -63,6 +63,21 @@ impl Schema {
         self.fields.push(f);
     }
 
+    pub fn generate_header(&self) -> String {
+        let mut result = Vec::with_capacity(self.fields.len());
+
+        for field in self.fields.iter() {
+            result.push(field.name.clone())
+        }
+
+        let delim = match self.delimiter.as_str() {
+            "fixed" => "",
+            d => d
+        };
+
+        result.join(delim)
+    }
+
     pub fn generate_row(&self, rng: &mut rand::ThreadRng) -> Result<String, String> {
         let mut result = Vec::with_capacity(self.fields.len());
 

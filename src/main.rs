@@ -223,6 +223,9 @@ fn main() {
         let (output_channel, ot) = initialize_output_thread(output_mode, None);
         output_thread = ot;
 
+        // Output header
+        output_channel.send(schema.generate_header()).unwrap();
+
         let num_batches = num_rows / batch_size;
 
         if num_threads > 1 {
