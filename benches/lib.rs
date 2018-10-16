@@ -7,6 +7,12 @@ extern crate rand;
 #[macro_use]
 extern crate fourree;
 
+use std::thread;
+use std::sync::Arc;
+use std::sync::mpsc::{channel};
+use std::io;
+use std::io::Write;
+
 use test::Bencher;
 
 use fourree::generators::*;
@@ -190,4 +196,51 @@ fn bench_generate_1000_complex_rows_from_file(b: &mut Bencher) {
     b.iter(|| {
         schema.generate_rows(&mut rng, 1000).unwrap();
     });
+}
+
+#[bench]
+fn bench_generate_1000_complex_rows_threaded(b: &mut Bencher) {
+    let schema = load_schema_from_file("benches/complex.json").ok().unwrap();
+    let schema_ref = Arc::new(schema);
+
+    b.iter(|| {
+        let mut handles = Vec::new();
+        let (sender, receiver) = channel();
+        let output_thread = thread::spawn(move || {
+            loop {
+                match receiver.recv() {
+                    Ok(message) => {
+                        message
+                    }
+                    Err(_) => {
+                        break;
+                    }
+                };
+            }
+        });
+
+        for n in 1..4 {
+            let thread_schema = schema_ref.clone();
+            let thread_channel = sender.clone();
+            handles.push(thread::spawn(move || {
+                println!("Creating thread {}", n);
+                let mut rng = rand::thread_rng();
+
+                // Use caluclated number of batches to run per thread
+                let rows = thread_schema.generate_rows(&mut rng, 250).unwrap();
+                println!("Rows generated!");
+                thread_channel.send(rows).unwrap();
+                println!("Thread work done.");
+            }));
+        }
+
+        // Wait for generator threads to complete
+        for handle in handles {
+            //let name = handle.thread().name().unwrap();
+            handle.join().unwrap();
+            print!("Thread completed.");
+        }
+
+        output_thread.join().unwrap();
+    })
 }

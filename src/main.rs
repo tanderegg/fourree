@@ -28,7 +28,8 @@ enum OutputMode {
     None,
     Stdout,
     File,
-    Postgresql
+    Postgresql,
+    S3
 }
 
 #[derive(PartialEq)]
@@ -54,9 +55,6 @@ fn initialize_output_thread(output_mode: OutputMode, _: Option<String>) ->
     let (sender, receiver) = channel();
     let thread = thread::spawn(move || {
 
-        let stdout = io::stdout();
-        let mut stdout_lock = stdout.lock();
-
         loop {
             let output = match receiver.recv() {
                 Ok(message) => {
@@ -70,8 +68,13 @@ fn initialize_output_thread(output_mode: OutputMode, _: Option<String>) ->
 
             match output_mode {
                 OutputMode::Stdout => {
+                    let stdout = io::stdout();
+                    let mut stdout_lock = stdout.lock();
                     writeln!(stdout_lock, "{}", output).unwrap();
                 },
+                OutputMode::S3 => {
+
+                }
                 _ => ()
             }
         }
@@ -262,6 +265,9 @@ fn main() {
             "postgresql" => {
                 warn!("PostgreSQL output is not yet implemented, will be no-op!");
                 OutputMode::Postgresql
+            },
+            "s3" => {
+                OutputMode::S3
             },
             _ => {
                 warn!("Unupported output requested: {}, defaulting to 'None'", output_opt);
