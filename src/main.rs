@@ -291,67 +291,6 @@ fn main() {
         }
     };
 
-<<<<<<< HEAD
-    // Define output_thread out of scope, so it will live beyond the data generation threads
-    // and the output_channel.
-    let output_thread;
-    {
-        let (output_channel, ot) = initialize_output_thread(output_mode, None);
-        output_thread = ot;
-
-        // Output header
-        output_channel.send(schema.generate_header()).unwrap();
-
-        let num_batches = num_rows / batch_size;
-
-        if num_threads > 1 {
-            let batches_per_thread = num_batches / num_threads;
-            let mut handles = Vec::with_capacity(num_threads as usize);
-            let schema_ref = Arc::new(schema);
-
-            for _ in 0..num_threads {
-                let thread_schema = schema_ref.clone();
-                let thread_channel = output_channel.clone();
-                handles.push(thread::spawn(move || {
-                    let mut rng = rand::thread_rng();
-
-                    // Use caluclated number of batches to run per thread
-                    for _ in 0..batches_per_thread.clone() {
-                        let batch_start = time::precise_time_s();
-                        let rows = thread_schema.generate_rows(&mut rng, batch_size.clone()).unwrap();
-                        thread_channel.send(rows).unwrap();
-                        let batch_elapsed = time::precise_time_s();
-                        info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
-                    }
-                }));
-            }
-
-            // Wait for generator threads to complete
-            for handle in handles {
-                //let name = handle.thread().name().unwrap();
-                handle.join().unwrap();
-                info!("Thread completed.");
-            }
-
-            // output_channel goes out of scope here, thus causing the output thread to terminate
-        } else {
-            let mut rng = rand::thread_rng();
-
-            for _ in 0..num_batches {
-                let batch_start = time::precise_time_s();
-                info!("Flushing output queue.");
-                let rows = schema.generate_rows(&mut rng, batch_size).unwrap();
-                output_channel.send(rows).unwrap();
-                let batch_elapsed = time::precise_time_s();
-                info!("{} rows proccessed, {} s elapsed", batch_size, batch_elapsed-batch_start);
-            }
-        }
-    }
-
-    // Now wait for output thread to complete
-    output_thread.join().unwrap();
-    info!("Output thread completed.");
-=======
     generate_data(
         num_rows,
         batch_size,
@@ -359,7 +298,6 @@ fn main() {
         output_mode,
         schema
     );
->>>>>>> 98cd83ae446b93b76a3e4473c46871e199846e05
 
     let end_time = time::precise_time_s();
     info!("Elapsed time: {} s", end_time-start_time);
