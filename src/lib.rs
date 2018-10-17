@@ -4,6 +4,8 @@ extern crate serde;
 extern crate serde_json;
 extern crate time;
 extern crate getopts;
+extern crate rusoto_core;
+extern crate rusoto_s3;
 
 #[macro_use]
 extern crate log;

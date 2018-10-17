@@ -2,7 +2,6 @@ extern crate rand;
 extern crate fourree;
 extern crate time;
 
-
 #[macro_use]
 extern crate log;
 
@@ -14,7 +13,13 @@ use fourree::util::{generate_data};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let config = config::load(args).unwrap();
+    let config = match config::load(args) {
+        Ok(config) => config,
+        Err(error) => {
+            error!("{}", error);
+            return
+        }
+    };
 
     info!("Loading schema from: {:?}", config.input_file);
 

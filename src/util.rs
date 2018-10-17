@@ -2,9 +2,17 @@ use time;
 use std;
 use rand;
 use std::io;
+use std::io::Read;
 use std::io::Write;
+use std::io::Seek;
+use std::io::SeekFrom;
 use std::io::BufWriter;
+use std::io::Cursor;
 use std::fs::File;
+use std::default::Default;
+
+use rusoto_core::Region;
+use rusoto_s3::{S3, S3Client, PutObjectRequest, StreamingBody};
 
 use std::thread;
 use std::sync::Arc;
@@ -43,7 +51,7 @@ pub fn initialize_output_thread(config: &Config) ->
         OutputMode::File => {
             let output_file = match config.output_file.clone() {
                 Some(f) => f,
-                None => panic!("output_file should always be Some when OutputMode == File!")
+                None => panic!("output_file required when OutputMode == File!")
             };
 
             thread::spawn(move || {
@@ -69,7 +77,40 @@ pub fn initialize_output_thread(config: &Config) ->
             panic!("PostgreSQL output not yet implemented!");
         },
         OutputMode::S3 => {
-            panic!("S3 output not yet implemented!")
+            let output_file = match config.output_file.clone() {
+                Some(f) => f,
+                None => panic!("output_file required when OutputMode == S3!")
+            };
+
+            thread::spawn(move || {
+                let mut writer = Cursor::new(Vec::new());
+
+                loop {
+                    let output: String = match receiver.recv() {
+                        Ok(message) => {
+                            message
+                        }
+                        Err(_) => {
+                            info!("Schema generation complete.");
+                            break;
+                        }
+                    };
+
+                    writer.write(output.as_bytes()).unwrap();
+                }
+
+                let client = S3Client::new(Region::UsEast1);
+                let mut body = Vec::new();
+                writer.seek(SeekFrom::Start(0)).unwrap();
+                writer.read_to_end(&mut body);
+                let object_request_definition = PutObjectRequest {
+                    body: Some(StreamingBody::from(body)),
+                    bucket: "sandbox-cdo".to_string(),
+                    key: output_file,
+                    ..Default::default()
+                };
+                client.put_object(object_request_definition).sync();
+            })
         },
         OutputMode::None => {
             panic!("An invalid output mode was specified.")

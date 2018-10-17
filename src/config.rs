@@ -48,7 +48,7 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
     opts.optopt("l", "log_file", "specify a file to write the log to", "LOG_FILE_PATH");
     opts.optopt("t", "threads", "specify the number of threads to use (default: 1)", "NUM_THREADS");
     opts.optopt("o", "output", "specify the desired output (default: stdout)", "OUTPUT");
-    opts.optopt("f", "output_file", "specify the file to output to, when in file output mode", "OUTPUT_FILE");
+    opts.optopt("f", "output_file", "specify the file to output to, when in file output mode, or key when in S3 output mode", "OUTPUT_FILE");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
@@ -162,7 +162,9 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
         OutputMode::Stdout
     };
 
-    let output_file = if output_mode == OutputMode::File && matches.opt_present("f"){
+    let output_file = if (
+        (output_mode == OutputMode::File || output_mode == OutputMode::S3)
+        && matches.opt_present("f")) {
         let output_file_opt = matches.opt_str("f").unwrap().trim().to_string();
         Some(output_file_opt)
     } else {
