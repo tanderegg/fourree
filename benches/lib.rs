@@ -10,8 +10,10 @@ extern crate fourree;
 use std::thread;
 use std::sync::Arc;
 use std::sync::mpsc::{channel};
-use std::io;
 use std::io::Write;
+use std::io::BufWriter;
+use std::fs;
+use std::fs::File;
 
 use test::Bencher;
 
@@ -174,7 +176,11 @@ fn bench_generate_simple_row_from_file(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        schema.generate_row(&mut rng).unwrap();
+        let file = File::create("/tmp/fourree-bench-tmp").unwrap();
+        let mut writer = BufWriter::new(file);
+        let rows = schema.generate_row(&mut rng).unwrap();
+        writer.write(rows.as_bytes()).unwrap();
+        fs::remove_file("/tmp/fourree-bench-tmp").unwrap();
     });
 }
 
@@ -184,7 +190,13 @@ fn bench_generate_complex_row_from_file(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        schema.generate_row(&mut rng).unwrap();
+        let file = File::create("/tmp/fourree-bench-tmp").unwrap();
+        {
+            let mut writer = BufWriter::new(file);
+            let rows = schema.generate_row(&mut rng).unwrap();
+            writer.write(rows.as_bytes()).unwrap();
+        }
+        fs::remove_file("/tmp/fourree-bench-tmp").unwrap();
     });
 }
 
@@ -194,7 +206,13 @@ fn bench_generate_1000_complex_rows_from_file(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        schema.generate_rows(&mut rng, 1000).unwrap();
+        let file = File::create("/tmp/fourree-bench-tmp").unwrap();
+        {
+            let mut writer = BufWriter::new(file);
+            let rows = schema.generate_rows(&mut rng, 1000).unwrap();
+            writer.write(rows.as_bytes()).unwrap();
+        }
+        fs::remove_file("/tmp/fourree-bench-tmp").unwrap();
     });
 }
 
@@ -204,43 +222,49 @@ fn bench_generate_1000_complex_rows_threaded(b: &mut Bencher) {
     let schema_ref = Arc::new(schema);
 
     b.iter(|| {
-        let mut handles = Vec::new();
-        let (sender, receiver) = channel();
-        let output_thread = thread::spawn(move || {
-            loop {
-                match receiver.recv() {
-                    Ok(message) => {
-                        message
-                    }
-                    Err(_) => {
-                        break;
-                    }
-                };
+        let file = File::create("/tmp/fourree-bench-tmp").unwrap();
+
+        {
+            let mut writer = BufWriter::new(file);
+            let mut handles = Vec::new();
+            let (sender, receiver) = channel();
+            let output_thread = thread::spawn(move || {
+                loop {
+                    let output: String = match receiver.recv() {
+                        Ok(message) => {
+                            message
+                        }
+                        Err(_) => {
+                            break;
+                        }
+                    };
+                    writer.write(output.as_bytes()).unwrap();
+                }
+            });
+
+            for _ in 1..4 {
+                let thread_schema = schema_ref.clone();
+                let thread_channel = sender.clone();
+                handles.push(thread::spawn(move || {
+                    let mut rng = rand::thread_rng();
+
+                    // Use caluclated number of batches to run per thread
+                    let rows = thread_schema.generate_rows(&mut rng, 250).unwrap();
+                    thread_channel.send(rows).unwrap();
+                }));
             }
-        });
 
-        for n in 1..4 {
-            let thread_schema = schema_ref.clone();
-            let thread_channel = sender.clone();
-            handles.push(thread::spawn(move || {
-                println!("Creating thread {}", n);
-                let mut rng = rand::thread_rng();
+            drop(sender);
 
-                // Use caluclated number of batches to run per thread
-                let rows = thread_schema.generate_rows(&mut rng, 250).unwrap();
-                println!("Rows generated!");
-                thread_channel.send(rows).unwrap();
-                println!("Thread work done.");
-            }));
+            // Wait for generator threads to complete
+            for handle in handles {
+                //let name = handle.thread().name().unwrap();
+                handle.join().unwrap();
+                print!("Thread completed.");
+            }
+
+            output_thread.join().unwrap();
         }
-
-        // Wait for generator threads to complete
-        for handle in handles {
-            //let name = handle.thread().name().unwrap();
-            handle.join().unwrap();
-            print!("Thread completed.");
-        }
-
-        output_thread.join().unwrap();
+        fs::remove_file("/tmp/fourree-bench-tmp").unwrap();
     })
 }

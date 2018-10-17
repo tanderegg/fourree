@@ -2,6 +2,8 @@ extern crate pad;
 extern crate rand;
 extern crate serde;
 extern crate serde_json;
+extern crate time;
+extern crate getopts;
 
 #[macro_use]
 extern crate log;
@@ -10,6 +12,8 @@ pub mod generators;
 pub mod json;
 pub mod schema;
 pub mod logger;
+pub mod util;
+pub mod config;
 
 /// Macro for taking the result of many generators and building a string
 ///
