@@ -44,7 +44,7 @@ pub fn initialize_output_thread(config: &Config) ->
                         }
                     };
 
-                    writeln!(stdout_lock, "{}", output).unwrap();
+                    write!(stdout_lock, "{}", output).unwrap();
                 }
             })
         },

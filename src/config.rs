@@ -4,7 +4,7 @@ use getopts::Options;
 use logger::init_logger;
 
 const NUM_ROWS_DEFAULT: u64 = 1000;
-const BATCH_SIZE_DEFAULT: u64 = 100;
+const BATCH_SIZE_DEFAULT: u64 = 1;
 const MAX_THREADS: u64 = 128;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -65,7 +65,8 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
 
     // Determine input file, quit if none given
     let input_file = if !matches.free.is_empty() {
-        matches.free[0].clone()
+        let input_file_uri = matches.free[0].clone();
+        input_file_uri
     } else {
         print_usage(&program, opts);
         return Err("An input file must be provided.".to_string());

@@ -118,8 +118,12 @@ pub fn generate_choice<R: Rng, T: ToString>(
     rng: &mut R, choices: &[T],
     choice_length: usize, length: usize
 ) -> String {
-    let num_choices = length / choice_length;
-    let mut output = String::with_capacity(num_choices);
+    let num_choices = if length > choice_length {
+        length / choice_length
+    } else {
+        1
+    };
+    let mut output = String::with_capacity(length);
     for _ in 0..num_choices {
         output.push_str(&rng.choose(choices).unwrap().to_string());
     }
