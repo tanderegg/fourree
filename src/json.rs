@@ -28,7 +28,7 @@ pub fn load_schema_from_file<'input>(file_name: &'input str) -> Result<Schema, S
                 .map_err(|err| err.to_string())
         })
         .and_then(|_| {
-            parse_json(raw_json)
+            parse_json(&raw_json)
         })
 }
 
@@ -44,7 +44,7 @@ pub fn load_schema_from_file<'input>(file_name: &'input str) -> Result<Schema, S
 /// let schema = parse_json("{\"table_name\": \"my_table\", \"fields\": []}".to_string());
 /// # }
 /// ```
-pub fn parse_json(raw_json: String) -> Result<Schema, String> {
+pub fn parse_json<'input>(raw_json: &'input str) -> Result<Schema, String> {
     let json_parsed: Value = from_str(&raw_json).expect("Invalid JSON string!");
 
     json_parsed.as_object()

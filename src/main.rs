@@ -8,10 +8,11 @@ extern crate log;
 use std::env;
 
 use fourree::config;
-use fourree::json::{load_schema_from_file};
+use fourree::json::{parse_json};
 use fourree::util::{generate_data};
 
 fn main() {
+    // Configure based on command line parameters
     let args: Vec<String> = env::args().collect();
     let config = match config::load(args) {
         Ok(config) => config,
@@ -21,12 +22,12 @@ fn main() {
         }
     };
 
+    // Load schema from source file
     info!("Loading schema from: {:?}", config.input_file);
-
     let start_time = time::precise_time_s();
 
     // Load and generate the data, sending it to OutputMode
-    let schema = match load_schema_from_file(&config.input_file) {
+    let schema = match parse_json(&config.input_file) {
         Ok(s) => s,
         Err(err) => {
             error!("{}", err);
@@ -34,6 +35,8 @@ fn main() {
         }
     };
 
+    // Generate the data based on configuration and schema
+    info!("Beginning data generation.");
     generate_data(&config, schema);
 
     let end_time = time::precise_time_s();

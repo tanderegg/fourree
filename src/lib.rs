@@ -6,6 +6,7 @@ extern crate time;
 extern crate getopts;
 extern crate rusoto_core;
 extern crate rusoto_s3;
+extern crate reqwest;
 
 #[macro_use]
 extern crate log;

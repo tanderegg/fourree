@@ -1,7 +1,12 @@
+use std::fs::File;
+use std::io::Read;
+
 use log::LogLevelFilter;
 use getopts::Options;
 
 use logger::init_logger;
+
+use reqwest;
 
 const NUM_ROWS_DEFAULT: u64 = 1000;
 const BATCH_SIZE_DEFAULT: u64 = 1;
@@ -66,7 +71,18 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
     // Determine input file, quit if none given
     let input_file = if !matches.free.is_empty() {
         let input_file_uri = matches.free[0].clone();
-        input_file_uri
+        if input_file_uri.starts_with("http") {
+            let mut response = reqwest::get(&input_file_uri).unwrap();
+            assert!(response.status().is_success());
+            let mut content = String::new();
+            response.read_to_string(&mut content).unwrap();
+            content
+        } else {
+            let mut f = File::open(input_file_uri).unwrap();
+            let mut content = String::new();
+            f.read_to_string(&mut content).unwrap();
+            content
+        }
     } else {
         print_usage(&program, opts);
         return Err("An input file must be provided.".to_string());
