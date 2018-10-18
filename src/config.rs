@@ -179,9 +179,8 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
         OutputMode::Stdout
     };
 
-    let output_file = if (
-        (output_mode == OutputMode::File || output_mode == OutputMode::S3)
-        && matches.opt_present("f")) {
+    let output_file = if (output_mode == OutputMode::File || output_mode == OutputMode::S3)
+                         && matches.opt_present("f") {
         let output_file_opt = matches.opt_str("f").unwrap().trim().to_string();
         Some(output_file_opt)
     } else {

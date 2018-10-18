@@ -102,14 +102,14 @@ pub fn initialize_output_thread(config: &Config) ->
                 let client = S3Client::new(Region::UsEast1);
                 let mut body = Vec::new();
                 writer.seek(SeekFrom::Start(0)).unwrap();
-                writer.read_to_end(&mut body);
+                writer.read_to_end(&mut body).unwrap();
                 let object_request_definition = PutObjectRequest {
                     body: Some(StreamingBody::from(body)),
                     bucket: "sandbox-cdo".to_string(),
                     key: output_file,
                     ..Default::default()
                 };
-                client.put_object(object_request_definition).sync();
+                client.put_object(object_request_definition).sync().unwrap();
             })
         },
         OutputMode::None => {
