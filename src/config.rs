@@ -63,6 +63,22 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
         }
     };
 
+    // Setup logging
+    let log_type = if matches.opt_present("l") {
+        let value = matches.opt_str("l").unwrap().trim().to_string();
+        if value == "stdout" {
+            init_logger(LogLevelFilter::Info, None).ok().expect("Failed to initalize logger!");
+            LogType::Console
+        } else {
+            init_logger(LogLevelFilter::Info, Some(value.clone())).ok().expect("Failed to initalize logger!");
+            LogType::File
+        }
+    } else {
+        init_logger(LogLevelFilter::Info, Some("fourree.log".to_string())).ok().expect("Failed to initialize logger!");
+        LogType::File
+    };
+
+    // Get help
     if matches.opt_present("h") {
         print_usage(&program, opts);
         return Err("".to_string());
@@ -77,8 +93,10 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
 
             match response {
                 Ok(mut response) => {
-                    assert!(response.status().is_success());
                     response.read_to_string(&mut content).unwrap();
+                    if !response.status().is_success() {
+                        return Err(format!("Getting input file from URL failed: {}: {}", response.status(), content))
+                    }
                     content
                 },
                 Err(error) => {
@@ -94,16 +112,6 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
     } else {
         print_usage(&program, opts);
         return Err("An input file must be provided.".to_string());
-    };
-
-    // Setup logging
-    let log_type = if matches.opt_present("l") {
-        let file_path = matches.opt_str("l").unwrap().trim().to_string();
-        init_logger(LogLevelFilter::Info, Some(file_path.clone())).ok().expect("Failed to initalize logger!");
-        LogType::File
-    } else {
-        init_logger(LogLevelFilter::Info, Some("fourree.log".to_string())).ok().expect("Failed to initialize logger!");
-        LogType::File
     };
 
     // Setup number of rows to produce
@@ -184,6 +192,9 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
             }
         }
     } else {
+        if log_type == LogType::Console {
+            return Err("To use stdout as the output destination, you must enable logging to file with the '-l' option.".to_string());
+        }
         OutputMode::Stdout
     };
 
