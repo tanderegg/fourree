@@ -72,11 +72,19 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
     let input_file = if !matches.free.is_empty() {
         let input_file_uri = matches.free[0].clone();
         if input_file_uri.starts_with("http") {
-            let mut response = reqwest::get(&input_file_uri).unwrap();
-            assert!(response.status().is_success());
+            let mut response = reqwest::get(&input_file_uri);
             let mut content = String::new();
-            response.read_to_string(&mut content).unwrap();
-            content
+
+            match response {
+                Ok(mut response) => {
+                    assert!(response.status().is_success());
+                    response.read_to_string(&mut content).unwrap();
+                    content
+                },
+                Err(error) => {
+                    return Err(format!("HTTP Error: {}", error))
+                }
+            }
         } else {
             let mut f = File::open(input_file_uri).unwrap();
             let mut content = String::new();
