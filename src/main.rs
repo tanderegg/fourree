@@ -14,6 +14,7 @@ use fourree::util::{generate_data};
 fn main() {
     // Configure based on command line parameters
     let args: Vec<String> = env::args().collect();
+
     let config = match config::load(args) {
         Ok(config) => config,
         Err(error) => {

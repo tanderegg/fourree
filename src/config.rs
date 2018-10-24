@@ -78,6 +78,8 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
         LogType::File
     };
 
+    info!("Logging initialized, proccessing command line options.");
+
     // Get help
     if matches.opt_present("h") {
         print_usage(&program, opts);
@@ -93,6 +95,7 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
 
             match response {
                 Ok(mut response) => {
+                    info!("{:?}", response);
                     response.read_to_string(&mut content).unwrap();
                     if !response.status().is_success() {
                         return Err(format!("Getting input file from URL failed: {}: {}", response.status(), content))
@@ -198,13 +201,17 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
         OutputMode::Stdout
     };
 
-    let output_file = if (output_mode == OutputMode::File || output_mode == OutputMode::S3)
-                         && matches.opt_present("f") {
-        let output_file_opt = matches.opt_str("f").unwrap().trim().to_string();
-        Some(output_file_opt)
-    } else {
-        None
-    };
+    let output_file =
+        if output_mode == OutputMode::File || output_mode == OutputMode::S3 {
+            if matches.opt_present("f") {
+                let output_file_opt = matches.opt_str("f").unwrap().trim().to_string();
+                Some(output_file_opt)
+            } else {
+                Some("output.txt".to_string())
+            }
+        } else {
+            None
+        };
 
     let num_batches = num_rows / batch_size;
     if num_batches % num_threads != 0 {
