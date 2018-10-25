@@ -1,8 +1,6 @@
 FROM alpine:3.8 AS build
 
 RUN apk add --no-cache openssl-dev gcc musl-dev rust cargo
-ADD Cargo.toml /app
-RUN cd /app && cargo install
 ADD . /app
 RUN cd /app && cargo build --release
 

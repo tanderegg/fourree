@@ -99,6 +99,7 @@ pub fn initialize_output_thread(config: &Config) ->
                     writer.write(output.as_bytes()).unwrap();
                 }
 
+                info!("Writing data to S3...");
                 let client = S3Client::new(Region::UsEast1);
                 let mut body = Vec::new();
                 writer.seek(SeekFrom::Start(0)).unwrap();
@@ -109,7 +110,11 @@ pub fn initialize_output_thread(config: &Config) ->
                     key: output_file,
                     ..Default::default()
                 };
-                client.put_object(object_request_definition).sync().unwrap();
+
+                match client.put_object(object_request_definition).sync() {
+                    Ok(_) => info!("Writing to S3 completed."),
+                    Err(error) => panic!("{}", error)
+                };
             })
         },
         OutputMode::None => {
