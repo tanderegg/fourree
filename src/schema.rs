@@ -75,8 +75,9 @@ impl Schema {
             d => d
         };
 
-        result.join(delim);
-        result.push('\n')
+        let mut result_string = result.join(delim);
+        result_string.push('\n');
+        result_string
     }
 
     pub fn generate_row(&self, rng: &mut rand::ThreadRng) -> Result<String, String> {
