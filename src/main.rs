@@ -38,7 +38,10 @@ fn main() {
 
     // Generate the data based on configuration and schema
     info!("Beginning data generation.");
-    generate_data(&config, schema);
+    match generate_data(&config, schema) {
+        Ok(_) => info!("Data successfully generated."),
+        Err(e) => error!("{}", e)
+    };
 
     let end_time = time::precise_time_s();
     info!("Elapsed time: {} s", end_time-start_time);
