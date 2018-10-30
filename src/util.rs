@@ -2,12 +2,8 @@ use time;
 use std;
 use rand;
 use std::io;
-use std::io::Read;
 use std::io::Write;
-use std::io::Seek;
-use std::io::SeekFrom;
 use std::io::BufWriter;
-use std::io::Cursor;
 use std::fs::File;
 use std::default::Default;
 
@@ -133,7 +129,7 @@ pub fn generate_batch(schema: &Schema, batch_size: u64,
 }
 
 /// Generate data from a schema
-pub fn generate_data(config: &Config, schema: Schema,) {
+pub fn generate_data(config: &Config, schema: Schema) {
     // Define output_thread out of scope, so it will live beyond the data generation threads
     // and the output_channel.
     let output_thread;
@@ -144,6 +140,10 @@ pub fn generate_data(config: &Config, schema: Schema,) {
         let num_batches = config.num_rows / config.batch_size;
         let batch_size = config.batch_size;
         let batches_per_thread = num_batches / config.num_threads;
+
+        if config.display_header {
+            output_channel.send(schema.generate_header()).unwrap();
+        }
 
         if config.num_threads > 1 {
             // Prepare for multithreading

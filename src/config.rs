@@ -34,7 +34,8 @@ pub struct Config {
     pub num_threads: u64,
     pub output_mode: OutputMode,
     pub input_file: String,
-    pub output_file: Option<String>
+    pub output_file: Option<String>,
+    pub display_header: bool
 }
 
 /// Prints the command line usage options
@@ -54,6 +55,7 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
     opts.optopt("t", "threads", "specify the number of threads to use (default: 1)", "NUM_THREADS");
     opts.optopt("o", "output", "specify the desired output (default: stdout)", "OUTPUT");
     opts.optopt("f", "output_file", "specify the file to output to, when in file output mode, or key when in S3 output mode", "OUTPUT_FILE");
+    opts.optflag("d", "display_header", "print the header as the first row");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
@@ -218,6 +220,9 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
         return Err("Number of batches must be evenly divisible by number of threads.".to_string())
     }
 
+    // Get help
+    let display_header = matches.opt_present("d");
+
     Ok(Config {
         num_rows: num_rows,
         num_threads: num_threads,
@@ -225,6 +230,7 @@ pub fn load(args: Vec<String>) -> Result<Config, String> {
         output_mode: output_mode,
         batch_size: batch_size,
         input_file: input_file,
-        output_file: output_file
+        output_file: output_file,
+        display_header: display_header
     })
 }
