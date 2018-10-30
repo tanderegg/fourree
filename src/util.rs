@@ -8,7 +8,9 @@ use std::fs::File;
 use std::default::Default;
 
 use rusoto_core::Region;
-use rusoto_s3::{S3, S3Client, PutObjectRequest, StreamingBody};
+use rusoto_s3::{S3, S3Client, CreateMultipartUploadRequest, UploadPartRequest,
+                CompletedPart, StreamingBody, CompleteMultipartUploadRequest,
+                CompletedMultipartUpload, AbortMultipartUploadRequest};
 
 use std::thread;
 use std::sync::Arc;
@@ -73,31 +75,130 @@ pub fn initialize_output_thread(config: &Config) ->
             panic!("PostgreSQL output not yet implemented!");
         },
         OutputMode::S3 => {
-            let output_file = match config.output_file.clone() {
+            let output_location = match config.output_file.clone() {
                 Some(f) => f,
                 None => panic!("output_file required when OutputMode == S3!")
             };
 
+            let split_location: Vec<&str> = output_location.split(':').collect();
+
+            if split_location.len() < 2 {
+                panic!("output_file must follow the format bucket:path when OutputMode == S3!");
+            }
+
+            let bucket = split_location[0].to_string();
+            let output_file = split_location[1].to_string();
+
+            // Initiate multipart upload process
+            let client = S3Client::new(Region::UsEast1);
+            let create_multipart_req = CreateMultipartUploadRequest {
+                bucket: bucket.to_owned(),
+                key: output_file.to_owned(),
+                ..Default::default()
+            };
+
+            info!("Initiating multipart S3 upload.");
+            let response = match client.create_multipart_upload(create_multipart_req).sync() {
+                Ok(r) => r,
+                Err(error) => panic!(error)
+            };
+
+            debug!("{:#?}", response);
+            let upload_id = response.upload_id.unwrap();
+
             thread::spawn(move || {
-                let mut data = Vec::new();
+                let mut part_number = 1;
+                let mut data = String::new();
+                let mut completed_parts = Vec::new();
 
                 loop {
-                    let output: String = match receiver.recv() {
+                    let message: String = match receiver.recv() {
                         Ok(message) => {
                             message
                         }
                         Err(_) => {
-                            info!("Schema generation complete.");
-                            break;
+                            info!("Thread data generation complete.");
+                            "done".to_string()
                         }
                     };
 
-                    data.write_all(output.as_bytes()).unwrap();
+                    if &message != "done" {
+                        data.push_str(&message);
+                    }
+
+                    if data.len() > 5242880 || &message == "done" {
+                        info!("Writing part to S3...");
+
+                        let byte_data = data.clone().into_bytes();
+                        data.clear();
+
+                        let create_upload_part = UploadPartRequest {
+                            body: Some(StreamingBody::from(byte_data)),
+                            bucket: bucket.to_owned(),
+                            key: output_file.to_owned(),
+                            upload_id: upload_id.to_owned(),
+                            part_number: part_number,
+                            ..Default::default()
+                        };
+
+                        let response = match client.upload_part(create_upload_part).sync() {
+                            Ok(r) => r,
+                            Err(error) => panic!(error)
+                        };
+
+                        debug!("{:#?}", response);
+                        completed_parts.push(CompletedPart {
+                            e_tag: response.e_tag.clone(),
+                            part_number: Some(part_number)
+                        });
+
+                        part_number += 1;
+                    }
+
+                    if &message == "done" {
+                        break;
+                    }
                 }
 
-                info!("Writing data to S3...");
-                let client = S3Client::new(Region::UsEast1);
-                let object_request_definition = PutObjectRequest {
+                info!("Completing multipart upload...");
+                let completed_upload = CompletedMultipartUpload { parts: Some(completed_parts) };
+
+                let complete_req = CompleteMultipartUploadRequest {
+                    bucket: bucket.to_owned(),
+                    key: output_file.to_owned(),
+                    upload_id: upload_id.to_owned(),
+                    multipart_upload: Some(completed_upload),
+                    ..Default::default()
+                };
+
+                match client.complete_multipart_upload(complete_req).sync() {
+                    Ok(r) => {
+                        debug!("{:#?}", r);
+                        info!("Multipart upload completed.");
+                    },
+                    Err(error) => {
+                        error!("{}", error);
+                        info!("Multipart upload failed, aborting...");
+                        let abort_multipart_upload_req = AbortMultipartUploadRequest {
+                            bucket: bucket.to_owned(),
+                            key: output_file.to_owned(),
+                            upload_id: upload_id.to_owned(),
+                            ..Default::default()
+                        };
+                        match client.abort_multipart_upload(abort_multipart_upload_req).sync() {
+                            Ok(r) => {
+                                debug!("{:#?}", r);
+                                info!("Multipart upload aborted.");
+                            },
+                            Err(error) => {
+                                error!("{}", error);
+                                info!("Failed to abort upload, please abort via S3 API.");
+                            }
+                        }
+                        return
+                    }
+                };
+                /*let object_request_definition = PutObjectRequest {
                     body: Some(StreamingBody::from(data)),
                     bucket: "sandbox-cdo".to_string(),
                     key: output_file,
@@ -107,7 +208,7 @@ pub fn initialize_output_thread(config: &Config) ->
                 match client.put_object(object_request_definition).sync() {
                     Ok(_) => info!("Writing to S3 completed."),
                     Err(error) => panic!("{}", error)
-                };
+                };*/
             })
         },
         OutputMode::None => {
@@ -140,10 +241,6 @@ pub fn generate_data(config: &Config, schema: Schema) {
         let num_batches = config.num_rows / config.batch_size;
         let batch_size = config.batch_size;
         let batches_per_thread = num_batches / config.num_threads;
-
-        if config.display_header {
-            output_channel.send(schema.generate_header()).unwrap();
-        }
 
         if config.num_threads > 1 {
             // Prepare for multithreading
@@ -181,7 +278,8 @@ pub fn generate_data(config: &Config, schema: Schema) {
     }
 
     // Now wait for output thread to complete
-    output_thread.join().unwrap();
-    info!("Output thread completed.");
-
+    match output_thread.join() {
+        Ok(_) => info!("Output thread completed."),
+        Err(error) => panic!(error)
+    }
 }

@@ -24,7 +24,7 @@ fn main() {
     };
 
     // Load schema from source file
-    info!("Loading schema from: {:?}", config.input_file);
+    debug!("Loading schema from: {:?}", config.input_file);
     let start_time = time::precise_time_s();
 
     // Load and generate the data, sending it to OutputMode
