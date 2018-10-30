@@ -83,7 +83,7 @@ pub fn initialize_output_thread(config: &Config) ->
             };
 
             thread::spawn(move || {
-                let mut writer = Cursor::new(Vec::new());
+                let mut data = Vec::new();
 
                 loop {
                     let output: String = match receiver.recv() {
@@ -96,16 +96,13 @@ pub fn initialize_output_thread(config: &Config) ->
                         }
                     };
 
-                    writer.write(output.as_bytes()).unwrap();
+                    data.write_all(output.as_bytes()).unwrap();
                 }
 
                 info!("Writing data to S3...");
                 let client = S3Client::new(Region::UsEast1);
-                let mut body = Vec::new();
-                writer.seek(SeekFrom::Start(0)).unwrap();
-                writer.read_to_end(&mut body).unwrap();
                 let object_request_definition = PutObjectRequest {
-                    body: Some(StreamingBody::from(body)),
+                    body: Some(StreamingBody::from(data)),
                     bucket: "sandbox-cdo".to_string(),
                     key: output_file,
                     ..Default::default()
