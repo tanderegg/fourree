@@ -150,11 +150,10 @@ pub fn s3_thread(config: &Config, receiver: Receiver<String>) -> Result<JoinHand
             if data.len() > 5242880 || &message == "done" {
                 info!("Writing part to S3...");
 
-                let byte_data = data.clone().into_bytes();
-                data.clear();
+                let local_data: String = data.drain(..).collect();
 
                 let create_upload_part = UploadPartRequest {
-                    body: Some(StreamingBody::from(byte_data)),
+                    body: Some(StreamingBody::from(local_data.into_bytes())),
                     bucket: bucket.to_owned(),
                     key: output_file.to_owned(),
                     upload_id: upload_id.to_owned(),
