@@ -254,6 +254,10 @@ pub fn generate_data(config: &Config, schema: Schema) -> Result<(), String> {
         let batch_size = config.batch_size;
         let batches_per_thread = num_batches / config.num_threads;
 
+        if config.display_header {
+            output_channel.send(schema.generate_header()).unwrap();
+        }
+
         if config.num_threads > 1 {
             // Prepare for multithreading
             let mut handles = Vec::with_capacity(config.num_threads as usize);
