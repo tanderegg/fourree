@@ -7,6 +7,14 @@ extern crate rand;
 #[macro_use]
 extern crate fourree;
 
+use std::thread;
+use std::sync::Arc;
+use std::sync::mpsc::{channel};
+use std::io::Write;
+use std::io::BufWriter;
+use std::fs;
+use std::fs::File;
+
 use test::Bencher;
 
 use fourree::generators::*;
@@ -30,6 +38,7 @@ fn gen_simple_row<R: rand::Rng>(rng: &mut R) -> String {
         "\t";
         generate_integer(rng, 0, 100000),
         generate_gauss(rng, 10000, 1000),
+        generate_gauss_f32(rng, 10000.0, 1000.0),
         generate_string(rng, 64),
         generate_date(rng),
         generate_choice(rng, &choices, 2, 2)
@@ -40,7 +49,7 @@ fn gen_complex_row<R: rand::Rng>(rng: &mut R) -> String {
     gen_row![
         "\t";
         generate_gauss(rng, 4000, 1000),
-        generate_gauss(rng, 4000, 1000),
+        generate_gauss_f32(rng, 4000.0, 1000.0),
         generate_integer(rng, 0, 1000000),
         generate_choice(rng, &choices, 2, 2),
         generate_string(rng, 32),
@@ -97,32 +106,38 @@ fn gen_complex_row<R: rand::Rng>(rng: &mut R) -> String {
 #[bench]
 fn bench_generate_integer(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
-    b.iter(|| { String::new() + &generate_integer(&mut rng, 0, 1000000).to_string(); });
+    b.iter(|| { generate_integer(&mut rng, 0, 1000000).to_string(); });
 }
 
 #[bench]
 fn bench_generate_string(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
-    b.iter(|| { String::new() + &generate_string(&mut rng, 25); });
+    b.iter(|| { generate_string(&mut rng, 25); });
 }
 
 #[bench]
 fn bench_generate_gauss(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
-    b.iter(|| { String::new() + &generate_gauss(&mut rng, 100, 20).to_string(); });
+    b.iter(|| { generate_gauss(&mut rng, 100, 20).to_string(); });
+}
+
+#[bench]
+fn bench_generate_gauss_f32(b: &mut Bencher) {
+    let mut rng = rand::thread_rng();
+    b.iter(|| { generate_gauss_f32(&mut rng, 100.0, 20.0).to_string(); });
 }
 
 #[bench]
 fn bench_generate_date(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
-    b.iter(|| { String::new() + &generate_date(&mut rng).to_string(); });
+    b.iter(|| { generate_date(&mut rng).to_string(); });
 }
 
 #[bench]
 fn bench_generate_choice(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
     let ex_choices = vec!["X", "A", "H", "B", "C", "D", "E", "F", "G"];
-    b.iter(|| { String::new() + &generate_choice(&mut rng, ex_choices.as_slice(), 2, 2).to_string(); });
+    b.iter(|| { generate_choice(&mut rng, ex_choices.as_slice(), 2, 2).to_string(); });
 }
 
 #[bench]
@@ -161,7 +176,11 @@ fn bench_generate_simple_row_from_file(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        schema.generate_row(&mut rng).unwrap();
+        let file = File::create("/tmp/fourree-bench-tmp").unwrap();
+        let mut writer = BufWriter::new(file);
+        let rows = schema.generate_row(&mut rng).unwrap();
+        writer.write(rows.as_bytes()).unwrap();
+        fs::remove_file("/tmp/fourree-bench-tmp").unwrap();
     });
 }
 
@@ -171,7 +190,13 @@ fn bench_generate_complex_row_from_file(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        schema.generate_row(&mut rng).unwrap();
+        let file = File::create("/tmp/fourree-bench-tmp").unwrap();
+        {
+            let mut writer = BufWriter::new(file);
+            let rows = schema.generate_row(&mut rng).unwrap();
+            writer.write(rows.as_bytes()).unwrap();
+        }
+        fs::remove_file("/tmp/fourree-bench-tmp").unwrap();
     });
 }
 
@@ -181,6 +206,65 @@ fn bench_generate_1000_complex_rows_from_file(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        schema.generate_rows(&mut rng, 1000).unwrap();
+        let file = File::create("/tmp/fourree-bench-tmp").unwrap();
+        {
+            let mut writer = BufWriter::new(file);
+            let rows = schema.generate_rows(&mut rng, 1000).unwrap();
+            writer.write(rows.as_bytes()).unwrap();
+        }
+        fs::remove_file("/tmp/fourree-bench-tmp").unwrap();
     });
+}
+
+#[bench]
+fn bench_generate_1000_complex_rows_threaded(b: &mut Bencher) {
+    let schema = load_schema_from_file("benches/complex.json").ok().unwrap();
+    let schema_ref = Arc::new(schema);
+
+    b.iter(|| {
+        let file = File::create("/tmp/fourree-bench-tmp").unwrap();
+
+        {
+            let mut writer = BufWriter::new(file);
+            let mut handles = Vec::new();
+            let (sender, receiver) = channel();
+            let output_thread = thread::spawn(move || {
+                loop {
+                    let output: String = match receiver.recv() {
+                        Ok(message) => {
+                            message
+                        }
+                        Err(_) => {
+                            break;
+                        }
+                    };
+                    writer.write(output.as_bytes()).unwrap();
+                }
+            });
+
+            for _ in 1..4 {
+                let thread_schema = schema_ref.clone();
+                let thread_channel = sender.clone();
+                handles.push(thread::spawn(move || {
+                    let mut rng = rand::thread_rng();
+
+                    // Use caluclated number of batches to run per thread
+                    let rows = thread_schema.generate_rows(&mut rng, 250).unwrap();
+                    thread_channel.send(rows).unwrap();
+                }));
+            }
+
+            drop(sender);
+
+            // Wait for generator threads to complete
+            for handle in handles {
+                //let name = handle.thread().name().unwrap();
+                handle.join().unwrap();
+                print!("Thread completed.");
+            }
+
+            output_thread.join().unwrap();
+        }
+        fs::remove_file("/tmp/fourree-bench-tmp").unwrap();
+    })
 }

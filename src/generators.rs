@@ -68,6 +68,17 @@ pub fn generate_gauss<R: Rng>(rng: &mut R, mean: i32, std_dev: i32) -> i32 {
     dist.ind_sample(rng) as i32
 }
 
+/// Generates an integer from a normal (Gaussian) distribution
+///
+/// # Examples
+///
+/// let x = generate_gauss(&mut rng, 10, 2);
+///
+pub fn generate_gauss_f32<R: Rng>(rng: &mut R, mean: f32, std_dev: f32) -> f32 {
+    let dist = Normal::new(mean as f64, std_dev as f64);
+    dist.ind_sample(rng) as f32
+}
+
 /// Generates a date (as a string for now)
 ///
 /// # Examples
@@ -107,8 +118,12 @@ pub fn generate_choice<R: Rng, T: ToString>(
     rng: &mut R, choices: &[T],
     choice_length: usize, length: usize
 ) -> String {
-    let num_choices = length / choice_length;
-    let mut output = String::with_capacity(num_choices);
+    let num_choices = if length > choice_length {
+        length / choice_length
+    } else {
+        1
+    };
+    let mut output = String::with_capacity(length);
     for _ in 0..num_choices {
         output.push_str(&rng.choose(choices).unwrap().to_string());
     }

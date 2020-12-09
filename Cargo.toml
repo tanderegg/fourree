@@ -1,6 +1,6 @@
 [package]
 name = "fourree"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["Tim Anderegg <timothy.anderegg@cfpb.gov>"]
 
 [lib]
@@ -31,4 +31,7 @@ log = "0.3"
 getopts = "0.2"
 time = "0.1"
 pad = "0.1"
-num = "0.1"
+num = "0.2"
+rusoto_core = "0.34.0"
+rusoto_s3 = "0.34.0"
+reqwest = "0.7.3"
