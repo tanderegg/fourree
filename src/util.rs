@@ -151,28 +151,41 @@ pub fn s3_thread(config: &Config, receiver: Receiver<String>) -> Result<JoinHand
                 info!("Writing part to S3...");
 
                 let local_data: String = data.drain(..).collect();
+                let local_data_bytes = local_data.into_bytes();
 
-                let create_upload_part = UploadPartRequest {
-                    body: Some(StreamingBody::from(local_data.into_bytes())),
-                    bucket: bucket.to_owned(),
-                    key: output_file.to_owned(),
-                    upload_id: upload_id.to_owned(),
-                    part_number: part_number,
-                    ..Default::default()
-                };
+                let mut tries = 1;
+                let part_response;
 
-                let response = match client.upload_part(create_upload_part).sync() {
-                    Ok(r) => r,
-                    Err(error) => {
-                        info!("Multipart upload failed, aborting...");
-                        abort_s3_upload(&client, &bucket, &output_file, &upload_id);
-                        panic!(error)
-                    }
-                };
+                loop {
+                    let body = StreamingBody::from(local_data_bytes.clone());
+                    let create_upload_part = UploadPartRequest {
+                        body: Some(body),
+                        bucket: bucket.to_owned(),
+                        key: output_file.to_owned(),
+                        upload_id: upload_id.to_owned(),
+                        part_number: part_number,
+                        ..Default::default()
+                    };
 
-                debug!("{:#?}", response);
+                    part_response = match client.upload_part(create_upload_part).sync() {
+                        Ok(r) => r,
+                        Err(error) => {
+                            error!("Error: {:?}", error);
+                            if tries > 5 {
+                                abort_s3_upload(&client, &bucket, &output_file, &upload_id);
+                                panic!("Multipart upload failed after {} attempts.", tries);
+                            }
+                            error!("Multipart upload failed, retry {}", tries);
+                            tries += 1;
+                            continue
+                        }
+                    };
+                    break
+                }
+
+                debug!("{:#?}", part_response);
                 completed_parts.push(CompletedPart {
-                    e_tag: response.e_tag.clone(),
+                    e_tag: part_response.e_tag.clone(),
                     part_number: Some(part_number)
                 });
 
@@ -202,8 +215,9 @@ pub fn s3_thread(config: &Config, receiver: Receiver<String>) -> Result<JoinHand
             },
             Err(error) => {
                 info!("Multipart upload failed, aborting...");
+                info!("Error: {:?}", error);
                 abort_s3_upload(&client, &bucket, &output_file, &upload_id);
-                panic!(error)
+                panic!("{:?}", error);
             }
         };
     }))
@@ -223,7 +237,7 @@ pub fn abort_s3_upload(client: &S3Client, bucket: &String, key: &String, upload_
             info!("Multipart upload aborted.");
         },
         Err(error) => {
-            error!("{}", error);
+            error!("{:?}", error);
             info!("Failed to abort upload, please abort via S3 API.");
         }
     }
